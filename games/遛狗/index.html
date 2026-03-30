@@ -640,9 +640,34 @@
     .pp-act:active { transform:scale(0.94); }
     .pp-act .pa-icon { font-size:24px; }
     .pp-act .pa-label { font-size:11px; color:var(--qq-text-sec); }
+
+    /* 返回首页按钮 */
+    .back-home {
+      position: fixed;
+      top: 12px;
+      left: 12px;
+      z-index: 9999;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.45);
+      -webkit-backdrop-filter: blur(12px);
+      backdrop-filter: blur(12px);
+      border: 0.5px solid rgba(255,255,255,0.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+      transition: transform 0.15s, background 0.15s;
+    }
+    .back-home:active { transform: scale(0.9); background: rgba(0,0,0,0.6); }
+    .back-home svg { width: 18px; height: 18px; stroke: rgba(255,255,255,0.85); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
   </style>
 </head>
 <body>
+  <a class="back-home" href="../../index.html" title="返回首页">
+    <svg viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7"/></svg>
+  </a>
   <!-- 选宠物界面 -->
   <div id="petSelectOverlay">
     <h1>遛狗公园</h1>
