@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+  <title>篝火场域</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- ===== 大厅页面 ===== -->
+  <div id="lobby">
+    <div class="lobby-bg"></div>
+    <div class="lobby-content">
+      <div class="lobby-title">🔥 篝火场域</div>
+      <div class="lobby-desc">一个永远存在的篝火。<br>你可以随时来坐坐。</div>
+      <div id="lobby-status" class="lobby-status">
+        <div class="lobby-stat"><span class="stat-icon">👤</span><span id="lobby-people">0</span> 人在场</div>
+        <div class="lobby-stat"><span class="stat-icon">🔥</span><span id="lobby-fire-state">灰烬</span></div>
+        <div class="lobby-stat"><span class="stat-icon">🕐</span><span id="lobby-time">--:--</span></div>
+      </div>
+      <div id="lobby-preview" class="lobby-preview">
+        <canvas id="lobby-canvas"></canvas>
+      </div>
+      <button id="btn-enter" class="lobby-enter-btn">坐到篝火旁</button>
+      <div class="lobby-hint">沉默在这里从来不需要理由</div>
+    </div>
+  </div>
+
+  <!-- ===== 主场域 ===== -->
+  <div id="app" class="hidden">
+    <div id="scene-container">
+      <canvas id="scene-canvas"></canvas>
+      <div id="char-labels"></div>
+      <div id="scene-ui">
+        <button id="btn-leave" class="scene-btn leave-btn" title="离开">✕</button>
+        <div id="scene-actions">
+          <button id="btn-write-note" class="scene-btn" title="写纸条">📝</button>
+          <button id="btn-cook" class="scene-btn" title="烤食物">🍢</button>
+          <button id="btn-dance" class="scene-btn" title="跳舞">💃</button>
+          <button id="btn-music" class="scene-btn" title="点歌">🎵</button>
+          <button id="btn-backpack" class="scene-btn" title="背包" style="position:relative">🎒<span id="bp-badge" class="bp-badge" style="display:none">0</span></button>
+        </div>
+      </div>
+      <!-- 烧烤控制面板 -->
+      <div id="cook-hud" class="hidden">
+        <div class="cook-hud-inner">
+          <div class="cook-hud-food" id="cook-hud-emoji">🍡</div>
+          <div class="cook-hud-bar-wrap">
+            <div class="cook-hud-bar">
+              <div class="cook-hud-fill" id="cook-hud-fill"></div>
+              <div class="cook-hud-zone" id="cook-hud-zone"></div>
+            </div>
+            <div class="cook-hud-labels">
+              <span>生</span><span>完美</span><span>焦</span>
+            </div>
+          </div>
+          <button id="btn-cook-done" class="cook-hud-btn">取出 🍴</button>
+        </div>
+      </div>
+      <div id="note-panel" class="hidden">
+        <div class="note-paper">
+          <textarea id="note-input" placeholder="写下你的心事..." maxlength="200"></textarea>
+          <div class="note-actions">
+            <button id="note-cancel" class="note-btn">收起</button>
+            <button id="note-burn" class="note-btn primary">丢进火里</button>
+          </div>
+        </div>
+      </div>
+      <div id="treasure-popup" class="hidden">
+        <div class="treasure-content">
+          <div class="treasure-icon">✨</div>
+          <div class="treasure-text"></div>
+          <button id="treasure-close" class="note-btn primary">收下</button>
+        </div>
+      </div>
+      <!-- 动物点击奖励弹窗 -->
+      <div id="animal-popup" class="hidden">
+        <div class="treasure-content">
+          <div class="treasure-icon" id="animal-popup-icon">🦊</div>
+          <div class="treasure-text" id="animal-popup-text"></div>
+          <button id="animal-popup-close" class="note-btn primary">收下</button>
+        </div>
+      </div>
+      <div id="story-popup" class="hidden">
+        <div class="story-content">
+          <h3>🔥 篝火故事</h3>
+          <div id="story-text"></div>
+          <div class="story-actions">
+            <textarea id="leave-message" placeholder="留句话给下一个点火的人..."></textarea>
+            <div class="story-btns">
+              <button id="btn-leave-wood" class="note-btn">留一根柴 🪵</button>
+              <button id="btn-leave-msg" class="note-btn primary">留言并离开</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- 背包面板 -->
+      <div id="backpack-panel" class="hidden">
+        <div class="bp-panel-inner">
+          <div class="bp-header">
+            <span id="backpack-title">🎒 背包</span>
+            <button id="backpack-close" class="bp-close-btn">✕</button>
+          </div>
+          <div id="backpack-list" class="bp-list"></div>
+        </div>
+      </div>
+      <!-- NPC 互动面板 -->
+      <div id="npc-panel" class="hidden">
+        <div class="npc-panel-inner">
+          <div class="npc-panel-name" id="npc-panel-name"></div>
+          <div class="npc-panel-actions">
+            <div class="npc-action" id="npc-whisper">👂 说悄悄话</div>
+            <div class="npc-action" id="npc-send-note">📝 传纸条</div>
+            <div class="npc-action" id="npc-give-food">🍢 送烤好的食物</div>
+            <div class="npc-action" id="npc-give-item">🎁 送物品</div>
+          </div>
+          <button id="npc-panel-close" class="bp-close-btn" style="margin-top:8px">取消</button>
+        </div>
+      </div>
+      <!-- 传纸条给NPC -->
+      <!-- 送礼备注面板 -->
+      <div id="give-note-panel" class="hidden">
+        <div class="note-paper">
+          <div id="give-note-to" style="font-size:12px;color:#888;margin-bottom:8px">送给...</div>
+          <textarea id="give-note-input" placeholder="留句话（可不填）..." maxlength="60" style="height:50px"></textarea>
+          <div class="note-actions">
+            <button id="give-note-cancel" class="note-btn">取消</button>
+            <button id="give-note-send" class="note-btn primary">送出 🎁</button>
+          </div>
+        </div>
+      </div>
+      <div id="npc-note-panel" class="hidden">
+        <div class="note-paper">
+          <div id="npc-note-to" style="font-size:12px;color:#888;margin-bottom:8px">写给...</div>
+          <textarea id="npc-note-input" placeholder="写点什么给TA..." maxlength="100"></textarea>
+          <div class="note-actions">
+            <button id="npc-note-cancel" class="note-btn">取消</button>
+            <button id="npc-note-send" class="note-btn primary">递过去</button>
+          </div>
+        </div>
+      </div>
+      <!-- 添柴确认面板 -->
+      <div id="wood-panel" class="hidden">
+        <div class="npc-panel-inner" style="align-items:center">
+          <div id="wood-fire-icon" style="font-size:36px;margin-bottom:6px">🪹</div>
+          <div id="wood-fire-status" style="font-size:14px;color:#aaa;margin-bottom:4px"></div>
+          <div id="wood-fire-time" style="font-size:12px;color:#666;margin-bottom:12px"></div>
+          <div style="height:1px;width:80%;background:rgba(255,255,255,0.08);margin-bottom:12px"></div>
+          <div id="wood-count-text" style="font-size:15px;color:#e0e0e0;margin-bottom:14px"></div>
+          <div id="wood-btn-row" style="display:flex;gap:10px;width:100%">
+            <button id="wood-cancel" class="note-btn" style="flex:1">离开</button>
+            <button id="wood-confirm" class="note-btn primary" style="flex:1">添一根柴</button>
+          </div>
+        </div>
+      </div>
+      <div id="notification" class="hidden"></div>
+    </div>
+    <div id="chat-container">
+      <div id="chat-header">
+        <div class="chat-title">篝火聊天</div>
+        <div id="fire-status"><span id="fire-timer"></span></div>
+        <div id="online-count">在场 <span id="count-num">1</span> 人</div>
+      </div>
+      <div id="chat-messages"></div>
+      <div id="chat-input-area">
+        <div id="chat-tools">
+          <button class="chat-tool-btn" id="btn-topic" title="发起话题">💬</button>
+        </div>
+        <div id="chat-input-wrapper">
+          <input type="text" id="chat-input" placeholder="说点什么..." />
+          <button id="chat-send">发送</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/utils.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/sky.js"></script>
+  <script src="js/fire.js"></script>
+  <script src="js/characters.js"></script>
+  <script src="js/interactions.js"></script>
+  <script src="js/backpack.js"></script>
+  <script src="js/chat.js"></script>
+  <script src="js/game.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

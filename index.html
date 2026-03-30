@@ -2,850 +2,639 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>遛狗公园</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Social Lab</title>
   <style>
     :root {
-      --qq-blue: #0099ff;
-      --qq-blue-light: #40b3ff;
-      --qq-blue-dark: #0077cc;
-      --qq-bg: #f5f6fa;
-      --qq-bg-dark: #edeff5;
-      --qq-card: #ffffff;
-      --qq-text: #1a1a1a;
-      --qq-text-sec: #8a8f99;
-      --qq-text-third: #b0b5bf;
-      --qq-border: #e8eaf0;
-      --qq-bubble-self: #95ec69;
-      --qq-bubble-other: #ffffff;
-      --qq-shadow: 0 2px 12px rgba(0,0,0,0.08);
-      --qq-shadow-lg: 0 8px 30px rgba(0,0,0,0.12);
-      --qq-radius: 12px;
-      --qq-radius-lg: 20px;
-      --qq-radius-full: 999px;
-      --font: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", "Segoe UI", sans-serif;
+      --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "PingFang SC", "Helvetica Neue", sans-serif;
     }
 
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body {
-      width: 100%; height: 100%;
-      overflow: hidden;
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+    html { background: #000; }
+    body {
+      font-family: var(--font);
       background: #000;
-      touch-action: none;
-      user-select: none;
-      -webkit-user-select: none;
-      font-family: var(--font);
+      color: #f5f5f7;
+      overflow-x: hidden;
     }
 
-    /* ===== 游戏主容器 ===== */
-    #app {
-      width: 100%; height: 100%;
-      display: flex;
-      flex-direction: column;
-      position: relative;
-    }
-    #gameCanvas {
-      width: 100%; flex: 1;
-      display: block;
-      image-rendering: pixelated;
-      image-rendering: crisp-edges;
-    }
-
-    /* ===== 常驻底部输入栏 ===== */
-    #worldInputBar {
-      display: flex;
-      padding: 8px 12px;
-      padding-bottom: max(8px, env(safe-area-inset-bottom));
-      gap: 8px;
-      background: rgba(255,255,255,0.95);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      border-top: 0.5px solid var(--qq-border);
-      align-items: center;
-      position: relative;
-      z-index: 20;
-    }
-    #worldInputBar.hidden { display: none; }
-    #worldInput {
-      flex: 1;
-      background: var(--qq-bg);
-      border: none;
-      color: var(--qq-text);
-      padding: 9px 14px;
-      font-size: 15px;
-      font-family: var(--font);
-      border-radius: var(--qq-radius-full);
-      outline: none;
-    }
-    #worldInput:focus { background: var(--qq-bg-dark); }
-    #worldInput::placeholder { color: var(--qq-text-third); }
-    #worldSendBtn {
-      background: var(--qq-blue);
-      border: none;
-      color: #fff;
-      width: 36px; height: 36px;
+    /* Nav */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      height: 48px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 15px;
-      cursor: pointer;
-      border-radius: 50%;
-      flex-shrink: 0;
-      transition: transform 0.15s;
+      background: rgba(0,0,0,0.8);
+      -webkit-backdrop-filter: saturate(180%) blur(20px);
+      backdrop-filter: saturate(180%) blur(20px);
     }
-    #worldSendBtn:active { transform: scale(0.92); }
+    nav span {
+      font-size: 14px;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      color: rgba(245,245,247,0.9);
+    }
 
-    /* ===== 聊天 AIO ===== */
-    #chatAIO {
-      display: none;
-      width: 100%;
-      height: 40%;
-      background: var(--qq-bg);
+    /* Hero */
+    .hero {
+      min-height: 100vh;
+      min-height: 100dvh;
+      display: flex;
       flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 48px 24px 80px;
       position: relative;
-      border-top: 0.5px solid var(--qq-border);
+    }
+    .hero-overline {
+      font-size: 13px;
+      font-weight: 400;
+      letter-spacing: 0.04em;
+      color: rgba(245,245,247,0.5);
+      margin-bottom: 20px;
+    }
+    .hero h1 {
+      font-size: 64px;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      line-height: 1.05;
+      max-width: 680px;
+    }
+    .hero h1 .em {
+      background: linear-gradient(90deg, #2997ff, #6dd5fa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .hero-sub {
+      margin-top: 20px;
+      font-size: 21px;
+      font-weight: 400;
+      line-height: 1.5;
+      color: rgba(245,245,247,0.5);
+      max-width: 460px;
+    }
+    .hero-scroll {
+      position: absolute;
+      bottom: 36px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      color: rgba(245,245,247,0.3);
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      animation: fadeInUp 1s ease 1.2s both;
+    }
+    .hero-scroll::after {
+      content: '';
+      width: 1px;
+      height: 28px;
+      background: linear-gradient(rgba(245,245,247,0.3), transparent);
+      animation: scrollLine 2s ease-in-out infinite;
+    }
+    @keyframes scrollLine {
+      0% { transform: scaleY(0); transform-origin: top; opacity: 1; }
+      50% { transform: scaleY(1); transform-origin: top; opacity: 1; }
+      51% { transform: scaleY(1); transform-origin: bottom; }
+      100% { transform: scaleY(0); transform-origin: bottom; opacity: 0; }
+    }
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Section */
+    .section {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 100px 24px;
+    }
+    .section-label {
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: rgba(245,245,247,0.35);
+      margin-bottom: 40px;
+    }
+
+    /* Experiment Card */
+    .exp-card {
+      display: block;
+      text-decoration: none;
+      color: inherit;
+      border-radius: 24px;
+      overflow: hidden;
+      background: #111;
+      transition: transform 0.5s cubic-bezier(0.16,1,0.3,1);
+    }
+    .exp-card:hover {
+      transform: scale(1.01);
+    }
+    .exp-card:active {
+      transform: scale(0.99);
+      transition-duration: 0.15s;
+    }
+
+    .exp-visual {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 21 / 9;
       overflow: hidden;
     }
-    #chatAIO.active {
-      display: flex;
-      animation: slideUp 0.3s cubic-bezier(0.32, 0.72, 0, 1);
-    }
-    @keyframes slideUp {
-      from { transform: translateY(100%); }
-      to { transform: translateY(0); }
-    }
-
-    /* 聊天顶栏 */
-    #chatHeader {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 12px 16px;
-      background: var(--qq-card);
-      border-bottom: 0.5px solid var(--qq-border);
-      min-height: 48px;
-    }
-    #chatHeader .chat-title {
-      color: var(--qq-text);
-      font-size: 15px;
-      font-weight: 600;
-      letter-spacing: -0.2px;
-    }
-    #chatHeader .close-btn {
-      background: none;
-      border: none;
-      color: var(--qq-text-sec);
-      font-size: 13px;
-      cursor: pointer;
-      padding: 4px 12px;
-      border-radius: var(--qq-radius-full);
-      transition: background 0.2s;
-    }
-    #chatHeader .close-btn:active {
-      background: var(--qq-bg-dark);
-    }
-    #chatHeader .photo-btn {
-      background: none;
-      border: none;
-      font-size: 18px;
-      cursor: pointer;
-      padding: 2px 6px;
-      border-radius: 6px;
-      transition: transform 0.15s;
-    }
-    #chatHeader .photo-btn:active { transform: scale(0.88); }
-    #chatHeader .chat-timer {
-      background: var(--qq-bg);
-      color: var(--qq-text);
-      font-size: 13px;
-      font-weight: 600;
-      padding: 3px 10px;
-      border-radius: var(--qq-radius-full);
-      font-variant-numeric: tabular-nums;
-      min-width: 48px;
-      text-align: center;
-    }
-    #chatHeader .chat-timer.warn {
-      background: #fff3e0;
-      color: #ff9500;
-    }
-    #chatHeader .chat-timer.danger {
-      background: #ffeaea;
-      color: #ff3b30;
-      animation: timerBlink 1s ease infinite;
-    }
-    @keyframes timerBlink {
-      0%,100% { opacity: 1; }
-      50% { opacity: 0.5; }
-    }
-
-    /* 消息区域 */
-    #chatMessages {
-      flex: 1;
-      overflow-y: auto;
-      padding: 12px 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      -webkit-overflow-scrolling: touch;
-    }
-    #chatMessages::-webkit-scrollbar { display: none; }
-
-    .chat-msg {
-      font-size: 14px;
-      line-height: 1.5;
-      padding: 8px 12px;
-      max-width: 75%;
-      word-break: break-word;
-      position: relative;
-    }
-    .chat-msg.system {
-      color: var(--qq-text-sec);
-      background: none;
-      align-self: center;
-      text-align: center;
-      font-size: 12px;
-      max-width: 85%;
-      padding: 4px 12px;
-    }
-    .chat-msg.action {
-      color: var(--qq-blue);
-      background: rgba(0,153,255,0.06);
-      align-self: center;
-      font-size: 12px;
-      max-width: 85%;
-      padding: 6px 14px;
-      border-radius: var(--qq-radius-full);
-    }
-    .chat-msg.npc {
-      color: var(--qq-text);
-      background: var(--qq-bubble-other);
-      align-self: flex-start;
-      border-radius: 4px 18px 18px 18px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-    }
-    .chat-msg.player {
-      color: var(--qq-text);
-      background: var(--qq-bubble-self);
-      align-self: flex-end;
-      border-radius: 18px 4px 18px 18px;
-    }
-
-    /* 输入区域 */
-    #chatInputArea {
-      display: flex;
-      padding: 8px 12px;
-      padding-bottom: max(8px, env(safe-area-inset-bottom));
-      gap: 8px;
-      background: var(--qq-card);
-      border-top: 0.5px solid var(--qq-border);
-      align-items: center;
-    }
-    #chatInput {
-      flex: 1;
-      background: var(--qq-bg);
-      border: none;
-      color: var(--qq-text);
-      padding: 9px 14px;
-      font-size: 15px;
-      font-family: var(--font);
-      border-radius: var(--qq-radius-full);
-      outline: none;
-      transition: background 0.2s;
-    }
-    #chatInput:focus { background: var(--qq-bg-dark); }
-    #chatInput::placeholder { color: var(--qq-text-third); }
-    #chatSendBtn {
-      background: var(--qq-blue);
-      border: none;
-      color: #fff;
-      width: 36px; height: 36px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 15px;
-      cursor: pointer;
-      border-radius: 50%;
-      flex-shrink: 0;
-      transition: transform 0.15s, opacity 0.15s;
-    }
-    #chatSendBtn:active {
-      transform: scale(0.92);
-      opacity: 0.85;
-    }
-
-    /* ===== 宠物选择界面 ===== */
-    #petSelectOverlay {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: linear-gradient(160deg, #0a1628 0%, #162240 50%, #1a2e52 100%);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      z-index: 100;
-    }
-    #petSelectOverlay.hidden { display: none; }
-    #petSelectOverlay h1 {
-      color: #fff;
-      font-size: 24px;
-      font-weight: 700;
-      margin-bottom: 6px;
-      letter-spacing: -0.5px;
-    }
-    #petSelectOverlay .subtitle {
-      color: rgba(255,255,255,0.45);
-      font-size: 13px;
-      margin-bottom: 32px;
-      font-weight: 400;
-    }
-    .pet-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 12px;
-      padding: 0 24px;
-      max-width: 360px;
+    .exp-visual canvas {
       width: 100%;
-    }
-    .pet-card {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      background: rgba(255,255,255,0.06);
-      border: 2px solid transparent;
-      border-radius: 16px;
-      padding: 14px 6px 10px;
-      cursor: pointer;
-      transition: all 0.25s cubic-bezier(0.32, 0.72, 0, 1);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-    }
-    .pet-card:active { transform: scale(0.96); }
-    .pet-card.selected {
-      border-color: var(--qq-blue);
-      background: rgba(0,153,255,0.12);
-      box-shadow: 0 0 0 1px var(--qq-blue), 0 4px 20px rgba(0,153,255,0.2);
-    }
-    .pet-card canvas {
-      image-rendering: pixelated;
-      image-rendering: crisp-edges;
-    }
-    .pet-card .pet-name {
-      color: rgba(255,255,255,0.9);
-      font-size: 13px;
-      font-weight: 500;
-      margin-top: 8px;
-    }
-    .pet-card .pet-trait {
-      color: rgba(255,255,255,0.35);
-      font-size: 11px;
-      margin-top: 2px;
-    }
-    #startBtn {
-      margin-top: 32px;
-      background: var(--qq-blue);
-      border: none;
-      color: #fff;
-      padding: 12px 56px;
-      font-size: 16px;
-      font-weight: 600;
-      font-family: var(--font);
-      cursor: pointer;
-      border-radius: var(--qq-radius-full);
-      opacity: 0.25;
-      pointer-events: none;
-      transition: all 0.3s cubic-bezier(0.32, 0.72, 0, 1);
-      letter-spacing: 0.5px;
-    }
-    #startBtn.ready {
-      opacity: 1;
-      pointer-events: auto;
-      box-shadow: 0 4px 20px rgba(0,153,255,0.35);
-    }
-    #startBtn.ready:active {
-      transform: scale(0.96);
-    }
-
-    /* ===== 通知提示 ===== */
-    #notification {
-      position: fixed;
-      top: 48px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(26,26,26,0.88);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      color: #fff;
-      font-size: 13px;
-      font-weight: 500;
-      padding: 10px 20px;
-      border-radius: var(--qq-radius-full);
-      z-index: 50;
-      display: none;
-      text-align: center;
-      max-width: 85%;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-    }
-    #notification.show {
+      height: 100%;
       display: block;
-      animation: notifIn 0.35s cubic-bezier(0.32, 0.72, 0, 1);
-    }
-    @keyframes notifIn {
-      from { opacity: 0; transform: translateX(-50%) translateY(-14px) scale(0.9); }
-      to { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
     }
 
-    /* ===== 弹窗通用 Overlay ===== */
-    .popup-overlay {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: rgba(0,0,0,0.35);
-      backdrop-filter: blur(6px);
-      -webkit-backdrop-filter: blur(6px);
-      z-index: 59;
-      display: none;
+    .exp-body {
+      padding: 48px;
     }
-    .popup-overlay.show { display: block; }
-
-    /* ===== 发现物品弹窗 ===== */
-    #discoveryPopup {
-      position: fixed;
-      top: 50%; left: 50%;
-      transform: translate(-50%, -50%);
-      background: var(--qq-card);
-      border-radius: var(--qq-radius-lg);
-      padding: 28px 24px 20px;
-      z-index: 60;
-      display: none;
-      text-align: center;
-      min-width: 240px;
-      box-shadow: var(--qq-shadow-lg);
-    }
-    #discoveryPopup.show {
-      display: block;
-      animation: popIn 0.35s cubic-bezier(0.32, 0.72, 0, 1);
-    }
-    @keyframes popIn {
-      from { opacity: 0; transform: translate(-50%, -50%) scale(0.85); }
-      to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-    }
-    #discoveryPopup canvas {
-      image-rendering: pixelated;
-      image-rendering: crisp-edges;
-    }
-    #discoveryPopup .disc-title {
-      color: var(--qq-text);
-      font-size: 16px;
-      font-weight: 600;
-      margin-top: 12px;
-    }
-    #discoveryPopup .disc-desc {
-      color: var(--qq-text-sec);
-      font-size: 13px;
-      margin-top: 6px;
-      line-height: 1.5;
-    }
-    #discoveryPopup .disc-btn {
-      margin-top: 18px;
-      background: var(--qq-blue);
-      border: none;
-      color: #fff;
-      padding: 9px 36px;
-      font-size: 14px;
+    .exp-num {
+      font-size: 12px;
       font-weight: 500;
-      font-family: var(--font);
-      cursor: pointer;
-      border-radius: var(--qq-radius-full);
-      transition: transform 0.15s;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: rgba(245,245,247,0.3);
+      margin-bottom: 12px;
     }
-    #discoveryPopup .disc-btn:active { transform: scale(0.96); }
-
-    /* ===== 邀请互动弹窗 ===== */
-    #invitePopup {
-      position: fixed;
-      top: 50%; left: 50%;
-      transform: translate(-50%, -50%);
-      background: var(--qq-card);
-      border-radius: var(--qq-radius-lg);
-      padding: 28px 24px 20px;
-      z-index: 60;
-      display: none;
-      text-align: center;
-      min-width: 260px;
-      box-shadow: var(--qq-shadow-lg);
-    }
-    #invitePopup.show {
-      display: block;
-      animation: popIn 0.35s cubic-bezier(0.32, 0.72, 0, 1);
-    }
-    #invitePopup .invite-emoji {
+    .exp-title {
       font-size: 36px;
-      margin-bottom: 8px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+      margin-bottom: 14px;
     }
-    #invitePopup .invite-title {
-      color: var(--qq-text);
-      font-size: 16px;
-      font-weight: 600;
-      margin-bottom: 4px;
+    .exp-desc {
+      font-size: 17px;
+      font-weight: 400;
+      line-height: 1.6;
+      color: rgba(245,245,247,0.5);
+      max-width: 520px;
+      margin-bottom: 32px;
     }
-    #invitePopup .invite-desc {
-      color: var(--qq-text-sec);
-      font-size: 13px;
-      margin-bottom: 20px;
-      line-height: 1.5;
-    }
-    #invitePopup .invite-btns {
+    .exp-tags {
       display: flex;
-      gap: 10px;
-      justify-content: center;
+      gap: 8px;
+      margin-bottom: 36px;
     }
-    #invitePopup .invite-btns button {
-      padding: 9px 28px;
-      font-size: 14px;
+    .exp-tag {
+      font-size: 12px;
       font-weight: 500;
-      font-family: var(--font);
-      cursor: pointer;
-      border-radius: var(--qq-radius-full);
-      border: none;
-      transition: transform 0.15s;
+      color: rgba(245,245,247,0.45);
+      padding: 6px 14px;
+      border-radius: 100px;
+      border: 1px solid rgba(245,245,247,0.1);
     }
-    #invitePopup .invite-btns button:active { transform: scale(0.96); }
-    #invitePopup .btn-yes {
-      background: var(--qq-blue);
-      color: #fff;
-      box-shadow: 0 2px 12px rgba(0,153,255,0.3);
+    .exp-tag.live {
+      color: #30d158;
+      border-color: rgba(48,209,88,0.25);
     }
-    #invitePopup .btn-no {
-      background: var(--qq-bg);
-      color: var(--qq-text-sec);
-    }
-
-    /* ===== 背包按钮 ===== */
-    #bagBtn {
-      position: fixed;
-      bottom: 68px;
-      right: 16px;
-      width: 44px; height: 44px;
-      background: rgba(255,255,255,0.92);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      border: none;
+    .exp-tag.live::before {
+      content: '';
+      display: inline-block;
+      width: 5px; height: 5px;
       border-radius: 50%;
-      color: var(--qq-text);
-      font-size: 20px;
-      display: none;
+      background: #30d158;
+      margin-right: 6px;
+      vertical-align: middle;
+    }
+    .exp-link {
+      font-size: 17px;
+      font-weight: 400;
+      color: #2997ff;
+      display: inline-flex;
       align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      z-index: 30;
-      box-shadow: 0 2px 12px rgba(0,0,0,0.1);
-      transition: transform 0.15s;
+      gap: 4px;
+      transition: gap 0.3s ease;
     }
-    #bagBtn.show { display: flex; }
-    #bagBtn:active { transform: scale(0.92); }
-
-    /* ===== 通用面板遮罩 ===== */
-    .panel-overlay {
-      position: fixed; top:0; left:0; width:100%; height:100%;
-      background: rgba(0,0,0,0.45);
-      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-      z-index: 70; display:none;
-      align-items: center; justify-content: center;
+    .exp-card:hover .exp-link {
+      gap: 8px;
     }
-    .panel-overlay.show { display:flex; animation: panelFadeIn 0.25s ease-out; }
-    @keyframes panelFadeIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
+    .exp-link svg {
+      width: 16px; height: 16px;
+      transition: transform 0.3s ease;
     }
-    .panel-overlay.show > * { animation: panelScaleIn 0.25s cubic-bezier(0.32,0.72,0,1); }
-    @keyframes panelScaleIn {
-      from { transform: scale(0.9); opacity: 0; }
-      to { transform: scale(1); opacity: 1; }
+    .exp-card:hover .exp-link svg {
+      transform: translateX(2px);
     }
 
-    /* ===== 拍照卡片 ===== */
-    .photo-card-inner {
-      background: var(--qq-card); border-radius: 16px; width: 88%; max-width: 340px;
-      overflow: hidden; box-shadow: var(--qq-shadow-lg);
-    }
-    .photo-card-img { background: #000; }
-    .photo-card-img canvas { width:100%; display:block; }
-    .photo-card-info { padding: 16px; }
-    .photo-card-title { font-size:16px; font-weight:700; color:var(--qq-text); margin-bottom:10px; }
-    .photo-card-pets { font-size:13px; color:var(--qq-text); line-height:1.8; }
-    .photo-card-stats { font-size:12px; color:var(--qq-text-sec); margin-top:8px; line-height:1.6; }
-    .photo-card-btns { display:flex; border-top:0.5px solid var(--qq-border); }
-    .photo-card-btns button {
-      flex:1; padding:14px 0; border:none; font-size:14px; font-weight:500;
-      font-family:var(--font); cursor:pointer; transition: background 0.15s;
-    }
-    .pc-btn-save { background:var(--qq-blue); color:#fff; }
-    .pc-btn-save:active { background:var(--qq-blue-dark); }
-    .pc-btn-close { background:var(--qq-card); color:var(--qq-text-sec); border-left:0.5px solid var(--qq-border) !important; }
-    .pc-btn-close:active { background:var(--qq-bg); }
-
-    /* ===== 背包面板 ===== */
-    .bag-inner {
-      background:var(--qq-card); border-radius:16px; width:90%; max-width:360px;
-      max-height:70vh; display:flex; flex-direction:column; overflow:hidden;
-      box-shadow:var(--qq-shadow-lg);
-    }
-    .bag-header {
-      display:flex; align-items:center; justify-content:space-between;
-      padding:14px 16px; font-size:16px; font-weight:700; color:var(--qq-text);
-      border-bottom:0.5px solid var(--qq-border);
-    }
-    .bag-close { background:none; border:none; font-size:18px; color:var(--qq-text-sec); cursor:pointer; padding:4px; }
-    .bag-tabs { display:flex; border-bottom:0.5px solid var(--qq-border); }
-    .bag-tab {
-      flex:1; padding:10px 0; border:none; background:none; font-size:13px;
-      font-family:var(--font); color:var(--qq-text-sec); cursor:pointer;
-      border-bottom:2px solid transparent; font-weight:500;
-    }
-    .bag-tab.active { color:var(--qq-blue); border-bottom-color:var(--qq-blue); }
-    .bag-items {
-      flex:1; overflow-y:auto; padding:12px; display:grid;
-      grid-template-columns: repeat(4,1fr); gap:10px;
-      -webkit-overflow-scrolling:touch; min-height:120px;
-    }
-    .bag-items::-webkit-scrollbar { display:none; }
-    .bag-item {
-      display:flex; flex-direction:column; align-items:center; padding:8px 4px;
-      background:var(--qq-bg); border-radius:12px; cursor:pointer; position:relative;
-      transition: transform 0.15s;
-    }
-    .bag-item:active { transform:scale(0.94); }
-    .bag-item .bi-icon { font-size:24px; }
-    .bag-item .bi-name { font-size:10px; color:var(--qq-text-sec); margin-top:4px; text-align:center; }
-    .bag-item .bi-count {
-      position:absolute; top:2px; right:2px; background:var(--qq-blue); color:#fff;
-      font-size:9px; min-width:14px; height:14px; border-radius:7px;
-      display:flex; align-items:center; justify-content:center; font-weight:600;
-    }
-    .bag-empty { grid-column:1/-1; text-align:center; color:var(--qq-text-third); font-size:13px; padding:20px 0; }
-
-    /* ===== 宠物互动面板 ===== */
-    .pet-panel-inner {
-      background:var(--qq-card); border-radius:16px; width:88%; max-width:320px;
-      overflow:hidden; box-shadow:var(--qq-shadow-lg);
-    }
-    .pp-header {
-      display:flex; align-items:center; gap:8px; padding:14px 16px;
-      border-bottom:0.5px solid var(--qq-border);
-    }
-    .pp-name { flex:1; font-size:15px; font-weight:600; color:var(--qq-text); }
-    .pp-mood { font-size:12px; color:var(--qq-text-sec); }
-    .pp-close { background:none; border:none; font-size:18px; color:var(--qq-text-sec); cursor:pointer; }
-    .pp-actions {
-      display:grid; grid-template-columns:repeat(3,1fr); gap:8px; padding:16px;
-    }
-    .pp-act {
-      display:flex; flex-direction:column; align-items:center; gap:6px;
-      padding:12px 4px; background:var(--qq-bg); border-radius:12px;
-      border:none; cursor:pointer; font-family:var(--font); transition:transform 0.15s;
-    }
-    .pp-act:active { transform:scale(0.94); }
-    .pp-act .pa-icon { font-size:24px; }
-    .pp-act .pa-label { font-size:11px; color:var(--qq-text-sec); }
-
-    /* 虚拟摇杆 */
-    #joystick {
-      position: fixed;
-      bottom: 90px;
-      left: 30px;
-      width: 100px;
-      height: 100px;
-      border-radius: 50%;
-      background: rgba(255,255,255,0.08);
-      border: 1.5px solid rgba(255,255,255,0.15);
-      z-index: 50;
-      touch-action: none;
-      display: none; /* 进入游戏后显示 */
-    }
-    #joystickKnob {
-      position: absolute;
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      background: rgba(255,255,255,0.25);
-      border: 1px solid rgba(255,255,255,0.3);
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      pointer-events: none;
-      transition: none;
+    /* Divider */
+    .divider {
+      max-width: 980px;
+      margin: 0 auto;
+      height: 1px;
+      background: rgba(245,245,247,0.08);
     }
 
-    /* 返回首页按钮 */
-    .back-home {
-      position: fixed;
-      top: 12px;
-      left: 12px;
-      z-index: 10000;
-      width: 36px;
-      height: 36px;
-      border-radius: 50%;
-      background: rgba(0,0,0,0.45);
-      -webkit-backdrop-filter: blur(12px);
-      backdrop-filter: blur(12px);
-      border: 0.5px solid rgba(255,255,255,0.15);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      text-decoration: none;
-      transition: transform 0.15s, background 0.15s;
-      pointer-events: auto !important;
-      touch-action: auto !important;
+    /* Coming */
+    .coming {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 80px 24px;
+      text-align: center;
     }
-    .back-home:active { transform: scale(0.9); background: rgba(0,0,0,0.6); }
-    .back-home svg { width: 18px; height: 18px; stroke: rgba(255,255,255,0.85); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .coming p {
+      font-size: 19px;
+      font-weight: 400;
+      color: rgba(245,245,247,0.25);
+    }
+
+    /* Footer */
+    footer {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 20px 24px 40px;
+      text-align: center;
+      font-size: 12px;
+      color: rgba(245,245,247,0.2);
+      letter-spacing: 0.02em;
+    }
+
+    @media (max-width: 734px) {
+      .hero h1 { font-size: 40px; }
+      .hero-sub { font-size: 17px; }
+      .exp-body { padding: 28px; }
+      .exp-title { font-size: 26px; }
+      .exp-desc { font-size: 15px; }
+      .exp-visual { aspect-ratio: 16 / 9; }
+    }
   </style>
 </head>
 <body>
-  <div class="back-home" id="backHomeBtn">
-    <svg viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7"/></svg>
-  </div>
-  <script>
-    (function(){
-      var btn = document.getElementById('backHomeBtn');
-      function goHome(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        e.stopImmediatePropagation();
-        // 向上找到 index.html 所在的根目录
-        var path = window.location.pathname;
-        var parts = path.split('/');
-        // 去掉最后两级 (games/遛狗/index.html → 根)
-        while (parts.length > 0 && parts[parts.length - 1] !== 'games') {
-          parts.pop();
-        }
-        if (parts.length > 0) parts.pop(); // 去掉 'games'
-        var root = parts.join('/') || '/';
-        if (!root.endsWith('/')) root += '/';
-        window.location.href = root + 'index.html';
-      }
-      btn.addEventListener('click', goHome, true);
-      btn.addEventListener('touchstart', function(e){
-        e.stopPropagation();
-        e.stopImmediatePropagation();
-      }, true);
-      btn.addEventListener('touchend', function(e){
-        goHome(e);
-      }, true);
-    })();
-  </script>
-  <!-- 选宠物界面 -->
-  <div id="petSelectOverlay">
-    <h1>遛狗公园</h1>
-    <p class="subtitle">选择你的伙伴，一起去公园散步吧</p>
-    <div class="pet-grid" id="petGrid"></div>
-    <button id="startBtn">出发</button>
-  </div>
 
-  <!-- 游戏主界面 -->
-  <div id="app">
-    <canvas id="gameCanvas"></canvas>
-    <!-- 虚拟摇杆 -->
-    <div id="joystick">
-      <div id="joystickKnob"></div>
-    </div>
-    <!-- 常驻底部输入栏（非聊天模式也可见） -->
-    <div id="worldInputBar" class="hidden">
-      <input id="worldInput" type="text" placeholder="说点什么..." maxlength="60">
-      <button id="worldSendBtn">↑</button>
-    </div>
-    <div id="chatAIO">
-      <div id="chatHeader">
-        <span class="chat-title" id="chatTitle">与???聊天中</span>
-        <span class="chat-timer" id="chatTimer">5:00</span>
-        <button class="photo-btn" id="photoBtn">📷</button>
-        <button class="close-btn" id="chatCloseBtn">结束玩耍</button>
-      </div>
-      <div id="chatMessages"></div>
-      <div id="chatInputArea">
-        <input id="chatInput" type="text" placeholder="说点什么..." maxlength="100">
-        <button id="chatSendBtn">↑</button>
-      </div>
-    </div>
-  </div>
+<nav><span>Social Lab</span></nav>
 
-  <!-- 通知 -->
-  <div id="notification"></div>
-  <!-- 弹窗遮罩 -->
-  <div class="popup-overlay" id="popupOverlay"></div>
-  <!-- 发现物品弹窗 -->
-  <div id="discoveryPopup">
-    <canvas id="discItemCanvas" width="48" height="48"></canvas>
-    <div class="disc-title" id="discTitle"></div>
-    <div class="disc-desc" id="discDesc"></div>
-    <button class="disc-btn" id="discBtn">太棒了</button>
-  </div>
-  <!-- 邀请互动弹窗 -->
-  <div id="invitePopup">
-    <div class="invite-emoji">🐾</div>
-    <div class="invite-title" id="inviteTitle"></div>
-    <div class="invite-desc" id="inviteDesc"></div>
-    <div class="invite-btns">
-      <button class="btn-no" id="inviteNo">下次吧</button>
-      <button class="btn-yes" id="inviteYes">一起玩</button>
-    </div>
-  </div>
-  <!-- 背包按钮 -->
-  <div id="bagBtn">🎒</div>
+<!-- Hero -->
+<section class="hero">
+  <p class="hero-overline">Social Experiment Platform</p>
+  <h1>探索人与人之间<br><span class="em">未曾发现的连接</span></h1>
+  <p class="hero-sub">我们设计社交实验，在真实的互动中，观察关系如何自然发生。</p>
+  <div class="hero-scroll">向下滚动</div>
+</section>
 
-  <!-- 拍照卡片 -->
-  <div id="photoCard" class="panel-overlay">
-    <div class="photo-card-inner">
-      <div class="photo-card-img"><canvas id="photoCanvas"></canvas></div>
-      <div class="photo-card-info">
-        <div class="photo-card-title">📸 美好瞬间</div>
-        <div class="photo-card-pets" id="photoCardPets"></div>
-        <div class="photo-card-stats" id="photoCardStats"></div>
-      </div>
-      <div class="photo-card-btns">
-        <button class="pc-btn-save" id="photoSaveBtn">保存到相册</button>
-        <button class="pc-btn-close" id="photoCloseBtn">关闭</button>
-      </div>
-    </div>
-  </div>
+<!-- Experiments -->
+<div class="divider"></div>
 
-  <!-- 背包面板 -->
-  <div id="bagPanel" class="panel-overlay">
-    <div class="bag-inner">
-      <div class="bag-header">
-        <span>🎒 背包</span>
-        <button class="bag-close" id="bagCloseBtn">✕</button>
-      </div>
-      <div class="bag-tabs">
-        <button class="bag-tab active" data-tab="food">零食</button>
-        <button class="bag-tab" data-tab="toy">玩具</button>
-        <button class="bag-tab" data-tab="collect">收藏</button>
-      </div>
-      <div class="bag-items" id="bagItems"></div>
-    </div>
-  </div>
+<section class="section">
+  <p class="section-label">Experiments</p>
 
-  <!-- 宠物互动面板 -->
-  <div id="petPanel" class="panel-overlay">
-    <div class="pet-panel-inner">
-      <div class="pp-header">
-        <span class="pp-name" id="ppName">🐕 宠物名</span>
-        <span class="pp-mood" id="ppMood">❤️ 80</span>
-        <button class="pp-close" id="ppClose">✕</button>
-      </div>
-      <div class="pp-actions" id="ppActions"></div>
+  <a class="exp-card" href="games/遛狗/index.html">
+    <div class="exp-visual">
+      <canvas id="cv1"></canvas>
     </div>
-  </div>
+    <div class="exp-body">
+      <p class="exp-num">No. 001</p>
+      <h2 class="exp-title">共同遛狗计划</h2>
+      <p class="exp-desc">在一座虚拟公园里，每个人都在遛自己的狗。当两只宠物自发地靠近彼此，它们的主人是否也会开始一段对话？</p>
+      <div class="exp-tags">
+        <span class="exp-tag live">进行中</span>
+        <span class="exp-tag">陌生人破冰</span>
+        <span class="exp-tag">非语言社交</span>
+      </div>
+      <span class="exp-link">
+        参与这个实验
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5L10.5 8 6 12.5"/></svg>
+      </span>
+    </div>
+  </a>
 
-  <script src="js/pixelart.js"></script>
-  <script src="js/map.js"></script>
-  <script src="js/pets.js"></script>
-  <script src="js/entities.js"></script>
-  <script src="js/ai.js"></script>
-  <script src="js/interaction.js"></script>
-  <script src="js/chat.js"></script>
-  <script src="js/game.js"></script>
+  <div style="height:80px"></div>
+
+  <a class="exp-card" href="games/campfire/index.html">
+    <div class="exp-visual">
+      <canvas id="cv2"></canvas>
+    </div>
+    <div class="exp-body">
+      <p class="exp-num">No. 002</p>
+      <h2 class="exp-title">永恒篝火</h2>
+      <p class="exp-desc">在一片空地中央，有一堆等待被点燃的篝火。陌生人围坐在一起，添柴、烤食物、写纸条、说悄悄话——火焰终将熄灭，但这一刻的温暖是真实的。</p>
+      <div class="exp-tags">
+        <span class="exp-tag live">进行中</span>
+        <span class="exp-tag">围炉夜话</span>
+        <span class="exp-tag">匿名陪伴</span>
+      </div>
+      <span class="exp-link">
+        参与这个实验
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5L10.5 8 6 12.5"/></svg>
+      </span>
+    </div>
+  </a>
+</section>
+
+<div class="divider"></div>
+
+<div class="coming">
+  <p>更多实验，即将展开。</p>
+</div>
+
+<footer>Social Lab © 2026</footer>
+
+<script>
+(function(){
+  const c = document.getElementById('cv1');
+  if(!c) return;
+  const p = c.parentElement.getBoundingClientRect();
+  const d = window.devicePixelRatio||1;
+  c.width = p.width*d;
+  c.height = p.height*d;
+  const x = c.getContext('2d');
+  x.scale(d,d);
+  const W = p.width, H = p.height;
+  let f = 0;
+
+  // 预计算固定元素
+  const stars = Array.from({length:20},(_,i)=>[
+    (i*137.5+23)%W, ((i*89.3+17)%(H*0.45)), Math.random()*6.28
+  ]);
+  const grassDots = Array.from({length:100},(_,i)=>[
+    (i*37.7+11)%W, H*0.58+((i*23.3+7)%(H*0.4))
+  ]);
+
+  function draw(){
+    x.clearRect(0,0,W,H);
+    const t = f*0.008;
+
+    // 天空
+    const g = x.createLinearGradient(0,0,0,H);
+    g.addColorStop(0,'#0c0c1a');
+    g.addColorStop(0.45,'#1a1430');
+    g.addColorStop(0.75,'#2a2040');
+    g.addColorStop(1,'#1a3028');
+    x.fillStyle=g;
+    x.fillRect(0,0,W,H);
+
+    // 星
+    stars.forEach(([sx,sy,off])=>{
+      const a = 0.15+0.5*Math.abs(Math.sin(f*0.012+off));
+      x.fillStyle=`rgba(255,255,255,${a})`;
+      x.fillRect(sx,sy,1.2,1.2);
+    });
+
+    // 月
+    x.fillStyle='rgba(255,252,230,0.85)';
+    x.beginPath(); x.arc(W*0.78,H*0.16,14,0,Math.PI*2); x.fill();
+    x.fillStyle='rgba(255,252,230,0.06)';
+    x.beginPath(); x.arc(W*0.78,H*0.16,36,0,Math.PI*2); x.fill();
+
+    // 远山
+    x.fillStyle='#111a18';
+    x.beginPath();
+    x.moveTo(0,H*0.55);
+    x.bezierCurveTo(W*0.2,H*0.42,W*0.4,H*0.48,W*0.55,H*0.44);
+    x.bezierCurveTo(W*0.7,H*0.4,W*0.85,H*0.46,W,H*0.5);
+    x.lineTo(W,H*0.6); x.lineTo(0,H*0.6);
+    x.fill();
+
+    // 草地
+    const gg = x.createLinearGradient(0,H*0.57,0,H);
+    gg.addColorStop(0,'#1c3c26');
+    gg.addColorStop(1,'#0e2418');
+    x.fillStyle=gg;
+    x.fillRect(0,H*0.57,W,H*0.43);
+    x.fillStyle='rgba(40,90,50,0.3)';
+    grassDots.forEach(([gx,gy])=> x.fillRect(gx,gy,1.5,1.5));
+
+    // 小路
+    x.fillStyle='rgba(60,50,35,0.35)';
+    x.beginPath();
+    x.moveTo(0,H*0.76);
+    x.quadraticCurveTo(W*0.3,H*0.7,W*0.5,H*0.73);
+    x.quadraticCurveTo(W*0.7,H*0.76,W,H*0.71);
+    x.lineTo(W,H*0.74);
+    x.quadraticCurveTo(W*0.7,H*0.79,W*0.5,H*0.76);
+    x.quadraticCurveTo(W*0.3,H*0.73,0,H*0.79);
+    x.fill();
+
+    // 树
+    function tree(tx,ty,s){
+      x.fillStyle='#1a1210';
+      x.fillRect(tx-2*s,ty,3*s,12*s);
+      x.fillStyle='#142e1a';
+      x.beginPath(); x.arc(tx,ty-2*s,10*s,0,Math.PI*2); x.fill();
+      x.fillStyle='#1d4425';
+      x.beginPath(); x.arc(tx+3*s,ty-4*s,7*s,0,Math.PI*2); x.fill();
+    }
+    tree(W*0.08,H*0.5,1.2);
+    tree(W*0.2,H*0.47,1.4);
+    tree(W*0.85,H*0.49,1.1);
+    tree(W*0.75,H*0.53,0.8);
+
+    // 路灯
+    function lamp(lx,ly){
+      x.fillStyle='#444';
+      x.fillRect(lx-0.8,ly,1.6,22);
+      x.fillStyle='rgba(255,220,120,0.8)';
+      x.beginPath(); x.arc(lx,ly,3,0,Math.PI*2); x.fill();
+      x.fillStyle='rgba(255,220,120,0.04)';
+      x.beginPath(); x.arc(lx,ly+10,28,0,Math.PI*2); x.fill();
+    }
+    lamp(W*0.38,H*0.5);
+    lamp(W*0.62,H*0.48);
+
+    // 人A
+    const ax=W*0.36+Math.sin(t)*2, ay=H*0.62;
+    x.fillStyle='#e8c9a0'; x.fillRect(ax,ay,4,4);
+    x.fillStyle='#5a7abf'; x.fillRect(ax-0.5,ay+4,5,6);
+    x.fillStyle='#2a2a2a'; x.fillRect(ax,ay+10,2,4); x.fillRect(ax+2.5,ay+10,2,4);
+
+    // 狗A
+    const dax=ax+16+Math.sin(t*1.2)*3, day=ay+5;
+    x.strokeStyle='rgba(160,140,100,0.4)'; x.lineWidth=0.8;
+    x.beginPath(); x.moveTo(ax+4.5,ay+6); x.quadraticCurveTo(ax+10,ay+10,dax,day+4); x.stroke();
+    x.fillStyle='#c0792f'; x.fillRect(dax,day+2,7,5);
+    x.fillRect(dax-2,day,3.5,3.5);
+    x.fillStyle='#d89040'; x.fillRect(dax+7,day,1.5,4);
+    x.fillStyle='#a06820'; x.fillRect(dax,day+7,1.5,2.5); x.fillRect(dax+4.5,day+7,1.5,2.5);
+
+    // 人B
+    const bx=W*0.58-Math.sin(t+1)*2, by=H*0.64;
+    x.fillStyle='#e8c9a0'; x.fillRect(bx,by,4,4);
+    x.fillStyle='#bf5a6a'; x.fillRect(bx-0.5,by+4,5,6);
+    x.fillStyle='#2a2a2a'; x.fillRect(bx,by+10,2,4); x.fillRect(bx+2.5,by+10,2,4);
+
+    // 狗B
+    const dbx=bx-14-Math.sin(t*1.4+2)*3, dby=by+5;
+    x.strokeStyle='rgba(160,140,100,0.4)'; x.lineWidth=0.8;
+    x.beginPath(); x.moveTo(bx,by+6); x.quadraticCurveTo(bx-6,by+10,dbx+5,dby+4); x.stroke();
+    x.fillStyle='#e8e4d8'; x.fillRect(dbx,dby+2,7,5);
+    x.fillRect(dbx+5,dby,3.5,3.5);
+    x.fillStyle='#f5f0e6'; x.fillRect(dbx-1.5,dby,1.5,3.5);
+    x.fillStyle='#ccc8bc'; x.fillRect(dbx,dby+7,1.5,2.5); x.fillRect(dbx+4.5,dby+7,1.5,2.5);
+
+    // 萤火虫
+    for(let i=0;i<6;i++){
+      const fx=(W*0.15)+((i*127)%(W*0.7));
+      const fy=H*0.42+((i*73)%(H*0.35));
+      const fl=0.2+0.5*Math.abs(Math.sin(f*0.018+i*2.1));
+      x.fillStyle=`rgba(180,230,100,${fl})`;
+      x.beginPath();
+      x.arc(fx+Math.sin(f*0.012+i)*8, fy+Math.cos(f*0.015+i)*5, 1.2,0,Math.PI*2);
+      x.fill();
+    }
+
+    f++;
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// 篝火预览 canvas
+(function(){
+  const c = document.getElementById('cv2');
+  if(!c) return;
+  const p = c.parentElement.getBoundingClientRect();
+  const d = window.devicePixelRatio||1;
+  c.width = p.width*d;
+  c.height = p.height*d;
+  const x = c.getContext('2d');
+  x.scale(d,d);
+  const W = p.width, H = p.height;
+  let f = 0;
+
+  // 预计算
+  const stars = Array.from({length:25},(_,i)=>[
+    (i*137.5+42)%W, ((i*89.3+13)%(H*0.35)), Math.random()*6.28
+  ]);
+  const grassDots = Array.from({length:80},(_,i)=>[
+    (i*37.7+5)%W, H*0.48+((i*23.3+7)%(H*0.5))
+  ]);
+  // 固定的围坐角色
+  const chars = [
+    { angle: 0.4, color: '#5a7abf' },
+    { angle: 1.5, color: '#8a5a5a' },
+    { angle: 2.6, color: '#5a8a5a' },
+    { angle: 3.8, color: '#8a7a5a' },
+    { angle: 5.2, color: '#7a5a8a' },
+  ];
+
+  function draw(){
+    x.clearRect(0,0,W,H);
+    const t = f*0.008;
+
+    // 天空渐变
+    const g = x.createLinearGradient(0,0,0,H);
+    g.addColorStop(0,'#0a0e28');
+    g.addColorStop(0.3,'#141a38');
+    g.addColorStop(0.5,'#1a2018');
+    g.addColorStop(1,'#121a10');
+    x.fillStyle=g;
+    x.fillRect(0,0,W,H);
+
+    // 星星
+    stars.forEach(([sx,sy,off])=>{
+      const a = 0.15+0.5*Math.abs(Math.sin(f*0.012+off));
+      x.fillStyle=`rgba(255,255,240,${a})`;
+      x.fillRect(sx,sy,1.2,1.2);
+    });
+
+    // 月亮
+    x.fillStyle='rgba(230,230,210,0.7)';
+    x.beginPath(); x.arc(W*0.82,H*0.12,8,0,Math.PI*2); x.fill();
+    x.fillStyle='rgba(230,230,210,0.04)';
+    x.beginPath(); x.arc(W*0.82,H*0.12,22,0,Math.PI*2); x.fill();
+
+    // 远景树林轮廓
+    x.fillStyle='#0e1a0c';
+    x.beginPath();
+    x.moveTo(0,H*0.42);
+    for(let i=0;i<=W;i+=4){
+      const th = Math.abs(Math.sin(i*0.025))*14 + Math.abs(Math.sin(i*0.06+1))*7;
+      x.lineTo(i, H*0.42 - th);
+    }
+    x.lineTo(W,H*0.48); x.lineTo(0,H*0.48);
+    x.fill();
+
+    // 地面
+    x.fillStyle='#142010';
+    x.fillRect(0,H*0.45,W,H*0.55);
+    x.fillStyle='rgba(30,50,20,0.3)';
+    grassDots.forEach(([gx,gy])=> x.fillRect(gx,gy,1.5,1.5));
+
+    // 篝火光晕
+    const fireCx = W*0.5, fireCy = H*0.58;
+    const flicker = 0.85 + 0.15*Math.sin(t*3);
+    const glowR = 80*flicker;
+    const glow = x.createRadialGradient(fireCx, fireCy-4, 0, fireCx, fireCy, glowR);
+    glow.addColorStop(0, `rgba(255,180,60,${0.18*flicker})`);
+    glow.addColorStop(0.4, `rgba(255,120,30,${0.08*flicker})`);
+    glow.addColorStop(1, 'rgba(255,80,10,0)');
+    x.fillStyle = glow;
+    x.beginPath(); x.arc(fireCx, fireCy, glowR, 0, Math.PI*2); x.fill();
+
+    // 石头圈
+    for(let i=0;i<10;i++){
+      const a = i/10*Math.PI*2;
+      const sx = fireCx + Math.cos(a)*22;
+      const sy = fireCy + 4 + Math.sin(a)*9;
+      x.fillStyle='rgb(60,58,52)';
+      x.fillRect(sx-2,sy-1.5,4,3);
+    }
+
+    // 柴火
+    x.fillStyle='#3a2510';
+    x.fillRect(fireCx-12,fireCy+2,24,4);
+    x.fillRect(fireCx-8,fireCy-1,18,3);
+
+    // 火焰
+    for(let i=0;i<3;i++){
+      const fh = (18+i*6)*flicker;
+      const fw = 4+i*3;
+      const sway = Math.sin(t*4+i*2)*3;
+      const alpha = [0.8,0.5,0.25][i];
+      const colors = ['rgba(255,240,180,A)','rgba(255,160,50,A)','rgba(200,60,15,A)'];
+      x.fillStyle = colors[i].replace('A',alpha*flicker);
+      x.beginPath();
+      x.moveTo(fireCx-fw+sway, fireCy);
+      x.quadraticCurveTo(fireCx+sway, fireCy-fh, fireCx+fw+sway, fireCy);
+      x.fill();
+    }
+
+    // 火星
+    for(let i=0;i<4;i++){
+      const ex = fireCx + Math.sin(t*2+i*1.7)*12;
+      const ey = fireCy - 18 - Math.abs(Math.sin(t*1.5+i*2.3))*20;
+      const ea = 0.3+0.5*Math.abs(Math.sin(f*0.02+i));
+      x.fillStyle=`rgba(255,180,50,${ea})`;
+      x.fillRect(ex,ey,1.5,1.5);
+    }
+
+    // 围坐的角色
+    chars.forEach(ch => {
+      const cx = fireCx + Math.cos(ch.angle)*48;
+      const cy = fireCy + Math.sin(ch.angle)*22;
+      // 身体
+      x.fillStyle = ch.color;
+      x.fillRect(cx-2, cy-2, 5, 5);
+      // 头
+      x.fillStyle = '#e8c090';
+      x.fillRect(cx-1.5, cy-6, 4, 4);
+      // 腿（盘坐）
+      x.fillStyle = '#2a3a4a';
+      x.fillRect(cx-4, cy+3, 4, 2);
+      x.fillRect(cx+1, cy+3, 4, 2);
+    });
+
+    // 烟
+    for(let i=0;i<3;i++){
+      const sx = fireCx + Math.sin(t+i*1.5)*5;
+      const sy = fireCy - 30 - i*12 - Math.sin(t*0.5+i)*4;
+      const sa = 0.04+0.03*Math.sin(f*0.01+i);
+      x.fillStyle=`rgba(120,115,110,${sa})`;
+      x.beginPath(); x.arc(sx,sy,4+i*2,0,Math.PI*2); x.fill();
+    }
+
+    f++;
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+</script>
+
 </body>
 </html>
