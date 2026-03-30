@@ -30,18 +30,7 @@ const Game = {
   },
 
   _bindSceneActions() {
-    // 添柴 — 先展示柴火数量，再决定是否添
-    document.getElementById('btn-add-wood').addEventListener('click', () => {
-      if (Characters.player.moveTask) { Utils.notify('你正在忙...'); return; }
-      const woods = Backpack.getWoodItems();
-      document.getElementById('wood-count-text').textContent =
-        woods.length > 0
-          ? `你有 ${woods.length} 根柴火`
-          : '你没有柴火了，去砍树或找小动物吧';
-      const confirmBtn = document.getElementById('wood-confirm');
-      confirmBtn.style.display = woods.length > 0 ? '' : 'none';
-      document.getElementById('wood-panel').classList.remove('hidden');
-    });
+    // 添柴面板事件（由点击篝火触发）
     document.getElementById('wood-cancel').addEventListener('click', () => {
       document.getElementById('wood-panel').classList.add('hidden');
     });
@@ -51,6 +40,7 @@ const Game = {
       const woods = Backpack.getWoodItems();
       if (woods.length === 0) { Utils.notify('背包里没有柴火了'); return; }
       Backpack.removeItem(woods[0].id);
+      if (Characters.player.isDancing) Characters.stopDancing('你');
       Chat.addSystemMessage('你站起身，拿了一根柴走向篝火...');
       Characters.sendToFire('你', 'addWood', 1.8, () => {
         Fire.addWood('你');
@@ -113,6 +103,33 @@ const Game = {
       Backpack.open('cook');
     });
 
+    // 跳舞
+    document.getElementById('btn-dance').addEventListener('click', () => {
+      const player = Characters.player;
+      if (player.isDancing) {
+        // 已在跳舞，停止
+        Characters.stopDancing('你');
+        Chat.addSystemMessage('你停下了舞步，坐回原处。');
+        Utils.notify('💃 休息一下~');
+        return;
+      }
+      if (player.moveTask || player.isCooking) { Utils.notify('你正在忙...'); return; }
+      Characters.startDancing('你');
+      Chat.addSystemMessage('💃 你站起身，开始围着篝火跳舞！');
+      Chat.addMessage('你', '💃 来跳舞呀！', 'self');
+      // 随机1~2个NPC加入跳舞
+      setTimeout(() => {
+        const idle = Characters.list.filter(c => !c.isPlayer && !c.isDancing && !c.moveTask && !c.isCooking);
+        const joinCount = Math.min(idle.length, Utils.randInt(1, 2));
+        for (let i = 0; i < joinCount; i++) {
+          const npc = idle[i];
+          Characters.startDancing(npc.name);
+          Chat.addMessage(npc.name, Utils.pick(['哈哈，我也来！', '跳起来！', '转圈圈～']), 'other');
+        }
+        if (joinCount > 0) Chat.addSystemMessage(`🎶 ${joinCount}位伙伴加入了跳舞！`);
+      }, 1500);
+    });
+
     // 点歌
     document.getElementById('btn-music').addEventListener('click', () => {
       AudioManager.ensureContext();
@@ -143,13 +160,10 @@ const Game = {
       document.getElementById('animal-popup').classList.add('hidden');
     });
 
-    // 退出按钮 — 返回小站首页
+    // 退出按钮
     document.getElementById('btn-leave').addEventListener('click', () => {
-      if (window.history.length > 1) {
-        window.history.back();
-      } else {
-        window.location.href = '../../index.html';
-      }
+      document.getElementById('app').classList.add('hidden');
+      document.getElementById('lobby').classList.remove('hidden');
     });
   },
 
@@ -274,32 +288,72 @@ const Game = {
         return;
       }
 
-      // 检查篝火区域点击（翻灰烬）
+      // 点击正在跳舞的角色 — 加入跳舞
+      const player = Characters.player;
+      if (!player.isDancing && !player.moveTask && !player.isCooking) {
+        const dancers = Characters.getDancers();
+        if (dancers.length > 0) {
+          const ps = 5;
+          for (const dancer of dancers) {
+            const dcx = Math.floor(dancer.x), dcy = Math.floor(dancer.y);
+            if (clickX >= dcx - 20 && clickX <= dcx + 25 &&
+                clickY >= dcy - 35 && clickY <= dcy + 20) {
+              Characters.startDancing('你');
+              Chat.addSystemMessage(`💃 你加入了 ${dancer.name} 的舞蹈！`);
+              Chat.addMessage(dancer.name, Utils.pick(['欢迎加入！', '一起跳！', '太棒了！']), 'other');
+              return;
+            }
+          }
+        }
+      }
+
+      // 点击篝火区域 — 弹出加柴面板
       const dx = clickX - Fire.cx;
       const dy = clickY - Fire.cy;
       const dist = Math.sqrt(dx*dx + dy*dy);
-      if (dist < 60 && Fire.state === 'ash') {
+      if (dist < 65) {
         if (Characters.player.moveTask) return;
-        AudioManager.ensureContext();
-        Chat.addSystemMessage('你走向灰烬堆，蹲下身...');
-        Characters.sendToFire('你', 'digAsh', 2.0, () => {
-          // 20%概率捡到柴火
-          if (Math.random() < 0.20) {
-            Backpack.addItem({ type: 'wood', name: '柴火', emoji: '🪵', desc: '从灰烬里翻出一根没烧完的柴。' });
-            Utils.notify('🪵 翻到了一根没烧完的柴！');
-            Chat.addSystemMessage('🪵 你从灰烬中翻出了一根柴火 — 已存入背包');
-          } else if (Math.random() < 0.125) {
-            const treasure = Utils.pick(Fire.treasures);
-            AudioManager.playTreasure();
-            document.getElementById('treasure-popup').classList.remove('hidden');
-            document.querySelector('.treasure-text').innerHTML =
-              `<div style="font-size:13px;color:#aaa;margin-bottom:8px">${treasure.type} · ${treasure.name}</div><div>"${treasure.msg}"</div>`;
-            Chat.addSystemMessage(`✨ 你在灰烬中翻到了什么东西...`);
+
+        // 篝火状态描述
+        const iconEl = document.getElementById('wood-fire-icon');
+        const statusEl = document.getElementById('wood-fire-status');
+        const timeEl = document.getElementById('wood-fire-time');
+
+        if (Fire.state === 'ash') {
+          iconEl.textContent = '🪹';
+          statusEl.textContent = '篝火已经熄灭了';
+          // 上次燃烧时间
+          const lastTime = Fire.lastDiedTime || Fire.stats.startTime;
+          if (lastTime) {
+            const ago = Math.floor((Date.now() - lastTime) / 1000);
+            if (ago < 60) timeEl.textContent = `${ago} 秒前熄灭`;
+            else if (ago < 3600) timeEl.textContent = `${Math.floor(ago / 60)} 分钟前熄灭`;
+            else timeEl.textContent = `${Math.floor(ago / 3600)} 小时前熄灭`;
           } else {
-            Utils.notify(Utils.pick(['灰烬温热，什么也没找到。','指尖触到温暖的灰烬。','翻到一块烧焦的木炭。','灰烬从指缝间漏下。']));
-            Chat.addSystemMessage('你拨开灰烬翻找了一会儿...');
+            timeEl.textContent = '还没有人点燃过这堆篝火';
           }
-        });
+        } else if (Fire.state === 'burning') {
+          iconEl.textContent = '🔥';
+          const m = Math.floor(Fire.remainingTime / 60);
+          const s = Math.floor(Fire.remainingTime % 60);
+          statusEl.textContent = '篝火正在燃烧';
+          timeEl.textContent = `剩余燃烧时间 ${m}:${s.toString().padStart(2, '0')}`;
+        } else {
+          iconEl.textContent = '🕯️';
+          statusEl.textContent = '篝火即将熄灭...';
+          timeEl.textContent = '快添柴火！';
+        }
+
+        // 柴火数量
+        const woods = Backpack.getWoodItems();
+        const countEl = document.getElementById('wood-count-text');
+        if (woods.length > 0) {
+          countEl.textContent = `你有 ${woods.length} 根柴火，要添一根吗？`;
+        } else {
+          countEl.textContent = '你没有柴火了，去砍树吧';
+        }
+        document.getElementById('wood-confirm').style.display = woods.length > 0 ? '' : 'none';
+        document.getElementById('wood-panel').classList.remove('hidden');
         return;
       }
 
@@ -326,6 +380,9 @@ const Game = {
 
       // 点击空地 - 玩家角色走到点击位置
       if (!Characters.player.moveTask && !Characters.player.isCooking) {
+        if (Characters.player.isDancing) {
+          Characters.stopDancing('你');
+        }
         Characters.moveToPosition(clickX, clickY);
       }
     });
@@ -335,6 +392,8 @@ const Game = {
     AudioManager.stopFireCrackle();
     AudioManager.stopCooking();
     if (this.cookingActive) this._finishCooking();
+    // 停止所有跳舞
+    Characters.list.forEach(c => { if (c.isDancing) Characters.stopDancing(c.name); });
     Chat.addSystemMessage('🕯️ 篝火慢慢暗下去了...');
     setTimeout(() => {
       Chat.addSystemMessage('💡 点击灰烬堆可以翻找宝藏...');

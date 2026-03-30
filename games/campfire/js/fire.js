@@ -153,18 +153,15 @@ const Fire = {
         this.remainingTime = 0;
         this.state = 'dying';
       }
-      // 火焰强度随剩余时间持续衰减
-      const totalPossible = this.maxTimePerWood * Math.max(1, this.stats.totalWood);
-      const ratio = Math.min(1, this.remainingTime / totalPossible);
-      if (ratio > 0.5) {
-        this.targetIntensity = 0.7 + ratio * 0.3;
-      } else {
-        this.targetIntensity = Math.max(0.08, ratio * 1.4);
-      }
+      // 火焰强度直接与剩余燃烧时间正相关
+      // 满柴（≥900s/15min）= 满强度1.0，逐渐衰减到0
+      const maxFuelTime = this.maxTimePerWood * 3; // 15分钟为满火
+      const ratio = Math.min(1, this.remainingTime / maxFuelTime);
+      // 平滑曲线：高燃料时火焰旺盛，低燃料时快速衰减
+      this.targetIntensity = Math.max(0.06, ratio * 0.6 + Math.sqrt(ratio) * 0.4);
       this.intensity = Utils.lerp(this.intensity, this.targetIntensity, 0.015);
 
-      // 柴火白热化：火焰越弱，木炭越热（反比关系）
-      // intensity 从1→0 时，charcoalHeat 从0.2→0.9
+      // 柴火白热化：火焰越弱，木炭越热
       const targetHeat = 0.2 + (1 - this.intensity) * 0.7;
       this.charcoalHeat = Utils.lerp(this.charcoalHeat, targetHeat, 0.008);
 
@@ -177,6 +174,7 @@ const Fire = {
       if (this.intensity < 0.01) {
         this.intensity = 0;
         this.state = 'ash';
+        this.lastDiedTime = Date.now();
         this.ashGlow = 0.5;
         this.charcoalHeat = Math.max(this.charcoalHeat, 0.85); // 保持通红
         this._generateCharcoals();

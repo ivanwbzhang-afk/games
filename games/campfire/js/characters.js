@@ -41,8 +41,10 @@ const Characters = {
       isWritingNote: false, showAction: null, facing: 1,
       chatBubble: null,
       // 移动系统
-      moveTask: null, // { phase:'walk_to'|'action'|'walk_back', targetX, targetY, actionType, actionTimer, actionDuration, callback }
+      moveTask: null,
       isWalking: false, walkFrame: 0,
+      // 跳舞系统
+      isDancing: false, danceAngle: 0, danceSpeed: 0,
     };
   },
 
@@ -208,13 +210,23 @@ const Characters = {
             char.facing = dx > 0 ? 1 : -1;
           }
         }
+      } else if (char.isDancing) {
+        // 跳舞：围绕篝火缓慢公转
+        char.danceAngle += char.danceSpeed * dt;
+        const orbitRx = 120, orbitRy = 75;
+        char.x = this.fireCx + Math.cos(char.danceAngle) * orbitRx;
+        char.y = this.fireCy + Math.sin(char.danceAngle) * orbitRy;
+        char.animFrame += dt * 1.8;
+        // 面朝运动方向
+        char.facing = -Math.sin(char.danceAngle) > 0 ? 1 : -1;
+        char.animState = 'dance';
       } else {
         // 正常idle
         char.animTimer += dt;
         if (char.animTimer > char.nextAnimChange) {
           char.animTimer = 0;
           char.nextAnimChange = Utils.randFloat(4, 15);
-          if (!char.isCooking && !char.isWritingNote) {
+          if (!char.isCooking && !char.isWritingNote && !char.isDancing) {
             char.animState = Utils.pick(this.idleAnims);
             char.animFrame = 0;
           }
@@ -317,20 +329,28 @@ const Characters = {
     }
 
     // 坐下时身体整体下沉
-    const isSitting = !char.isWalking && !isAction;
-    const sitDrop = isSitting ? 10 : 0; // 坐下时身体下移10像素
+    const isSitting = !char.isWalking && !isAction && !char.isDancing;
+    const sitDrop = isSitting ? 10 : 0;
+    // 跳舞弹跳
+    const danceBounce = char.isDancing ? Math.abs(Math.sin(char.animFrame * 1.8)) * 5 : 0;
 
-    // 腿 - 走路时交替迈步，坐着时盘腿（水平展开）
+    // 腿 - 走路时交替迈步，跳舞时站立弹跳，坐着时盘腿
     ctx.fillStyle = pal.pants;
     if (char.isWalking) {
-      // 站立行走——双腿在身体正下方交替
       const step = Math.sin(char.walkFrame) * 5;
-      ctx.fillRect(x - 4, bodyY + 2 + step, ps, ps * 2.5);
-      ctx.fillRect(x + 2, bodyY + 2 - step, ps, ps * 2.5);
-      // 鞋子
+      ctx.fillRect(x - 4, bodyY + 2 + step - danceBounce, ps, ps * 2.5);
+      ctx.fillRect(x + 2, bodyY + 2 - step - danceBounce, ps, ps * 2.5);
       ctx.fillStyle = '#2a2218';
-      ctx.fillRect(x - 5, bodyY + 2 + ps * 2.5 + step, ps + 2, 3);
-      ctx.fillRect(x + 1, bodyY + 2 + ps * 2.5 - step, ps + 2, 3);
+      ctx.fillRect(x - 5, bodyY + 2 + ps * 2.5 + step - danceBounce, ps + 2, 3);
+      ctx.fillRect(x + 1, bodyY + 2 + ps * 2.5 - step - danceBounce, ps + 2, 3);
+    } else if (char.isDancing) {
+      // 跳舞：双腿缓慢交替踏步
+      const step = Math.sin(char.animFrame * 1.8) * 3;
+      ctx.fillRect(x - 4, bodyY + 2 + step - danceBounce, ps, ps * 2);
+      ctx.fillRect(x + 2, bodyY + 2 - step - danceBounce, ps, ps * 2);
+      ctx.fillStyle = '#2a2218';
+      ctx.fillRect(x - 5, bodyY + 2 + ps * 2 + step - danceBounce, ps + 2, 3);
+      ctx.fillRect(x + 1, bodyY + 2 + ps * 2 - step - danceBounce, ps + 2, 3);
     } else {
       // 盘腿坐下——腿水平展开，比站立矮很多
       const legY = bodyY + sitDrop;
@@ -342,9 +362,9 @@ const Characters = {
       ctx.fillRect(x + 8 * f, legY + ps, ps * 2, ps);
     }
 
-    // 躯干——坐下时下沉
+    // 躯干——坐下时下沉，跳舞时弹跳
     ctx.fillStyle = pal.shirt;
-    const trunkY = bodyY - (isSitting ? ps * 3 - sitDrop : ps * 3) - torsoOffsetY;
+    const trunkY = bodyY - (isSitting ? ps * 3 - sitDrop : ps * 3) - torsoOffsetY - danceBounce;
     ctx.fillRect(x - ps, trunkY, ps * 3, ps * 3);
     ctx.fillRect(x - ps - 2, trunkY + ps, ps * 3 + 4, ps * 2);
 
@@ -414,6 +434,16 @@ const Characters = {
       ctx.fillStyle = pal.skin;
       ctx.fillRect(x - 10 - swing, armY + 6, ps, ps);
       ctx.fillRect(x + 8 + swing, armY + 6, ps, ps);
+    } else if (char.isDancing) {
+      // 跳舞手臂：缓慢交替举高
+      const wave = Math.sin(char.animFrame * 1.8);
+      const armUpL = Math.max(0, wave) * 10;
+      const armUpR = Math.max(0, -wave) * 10;
+      ctx.fillStyle = pal.skin;
+      ctx.fillRect(x - 12, armY + 2 - armUpL, ps, ps);
+      ctx.fillRect(x - 14, armY - 2 - armUpL, ps, ps);
+      ctx.fillRect(x + 10, armY + 2 - armUpR, ps, ps);
+      ctx.fillRect(x + 12, armY - 2 - armUpR, ps, ps);
     } else if (char.animState === 'rub_hands') {
       const rub = Math.sin(char.animFrame * 6) * 3;
       ctx.fillStyle = pal.skin;
@@ -479,15 +509,7 @@ const Characters = {
       ctx.textAlign = 'left';
     }
 
-    // 聊天气泡
-    if (char.chatBubble) this._drawChatBubble(ctx, char, x, headY - ps - 4);
-
-    // 名字
-    ctx.font = '12px sans-serif';
-    ctx.fillStyle = char.isPlayer ? 'rgba(255, 220, 120, 0.85)' : 'rgba(200, 200, 200, 0.55)';
-    ctx.textAlign = 'center';
-    ctx.fillText(char.name, x + 3, bodyY + sitDrop + ps * 2 + 14);
-    ctx.textAlign = 'left';
+    // 聊天气泡和名字改用 DOM 渲染（见 updateLabels）
   },
 
   _getCookEmoji(food) {
@@ -495,27 +517,84 @@ const Characters = {
     return map[food] || '🍢';
   },
 
-  _drawChatBubble(ctx, char, cx, topY) {
-    const text = char.chatBubble.text;
-    const isWhisper = char.chatBubble.isWhisper;
-    const fadeAlpha = Math.min(1, char.chatBubble.timer * 2);
-    ctx.font = '11px sans-serif';
-    const tw = ctx.measureText(text).width;
-    const padX = 8, padY = 5, bw = tw + padX*2, bh = 18 + padY;
-    const bx = cx - bw/2 + 3, by = topY - bh - 4;
-    ctx.globalAlpha = fadeAlpha;
-    ctx.fillStyle = isWhisper ? 'rgba(100,70,150,0.8)' : 'rgba(0,0,0,0.65)';
-    const r = 8;
-    ctx.beginPath();
-    ctx.moveTo(bx+r,by); ctx.lineTo(bx+bw-r,by);
-    ctx.quadraticCurveTo(bx+bw,by,bx+bw,by+r); ctx.lineTo(bx+bw,by+bh-r);
-    ctx.quadraticCurveTo(bx+bw,by+bh,bx+bw-r,by+bh); ctx.lineTo(bx+r,by+bh);
-    ctx.quadraticCurveTo(bx,by+bh,bx,by+bh-r); ctx.lineTo(bx,by+r);
-    ctx.quadraticCurveTo(bx,by,bx+r,by); ctx.fill();
-    ctx.beginPath(); ctx.moveTo(cx,topY-2); ctx.lineTo(cx-5,by+bh); ctx.lineTo(cx+5,by+bh); ctx.fill();
-    ctx.fillStyle = isWhisper ? 'rgba(200,180,255,0.9)' : '#fff';
-    ctx.textAlign = 'center'; ctx.fillText(text, cx+3, by+bh-padY-1); ctx.textAlign = 'left';
-    ctx.globalAlpha = 1;
+  _drawChatBubble() { /* 已迁移到 DOM */ },
+
+  // 每帧更新 DOM 文字标签位置
+  updateLabels() {
+    const container = document.getElementById('char-labels');
+    if (!container) return;
+
+    this.list.forEach(char => {
+      const ps = 5;
+      const x = Math.floor(char.x);
+      const isSitting = !char.isWalking && !char.isDancing && !(char.moveTask && char.moveTask.phase === 'action');
+      const sitDrop = isSitting ? 10 : 0;
+      const danceBounce = char.isDancing ? Math.abs(Math.sin(char.animFrame * 1.8)) * 5 : 0;
+      const nameY = char.y + sitDrop + ps * 2 + 14 - danceBounce;
+
+      // 名字标签
+      let nameEl = container.querySelector(`[data-char-name="${char.name}"]`);
+      if (!nameEl) {
+        nameEl = document.createElement('div');
+        nameEl.className = 'char-name ' + (char.isPlayer ? 'player' : 'npc');
+        nameEl.dataset.charName = char.name;
+        nameEl.textContent = char.name;
+        container.appendChild(nameEl);
+      }
+      nameEl.style.left = (x + 3) + 'px';
+      nameEl.style.top = nameY + 'px';
+
+      // 聊天气泡
+      let bubbleEl = container.querySelector(`[data-char-bubble="${char.name}"]`);
+      if (char.chatBubble) {
+        if (!bubbleEl) {
+          bubbleEl = document.createElement('div');
+          bubbleEl.className = 'char-bubble';
+          bubbleEl.dataset.charBubble = char.name;
+          container.appendChild(bubbleEl);
+        }
+        bubbleEl.textContent = char.chatBubble.text;
+        bubbleEl.className = 'char-bubble' + (char.chatBubble.isWhisper ? ' whisper' : '');
+        const torsoOffsetY = (char.moveTask && char.moveTask.phase === 'action')
+          ? Math.sin((char.moveTask.actionTimer / char.moveTask.actionDuration) * Math.PI) * 8 : 0;
+        const trunkY = char.y - (isSitting ? ps * 3 - sitDrop : ps * 3) - torsoOffsetY - danceBounce;
+        const headY = trunkY - ps * 2 - 2;
+        const bubbleY = headY - ps - 4 - 36;
+        bubbleEl.style.left = (x + 3) + 'px';
+        bubbleEl.style.top = bubbleY + 'px';
+        bubbleEl.style.opacity = Math.min(1, char.chatBubble.timer * 2);
+      } else if (bubbleEl) {
+        bubbleEl.remove();
+      }
+    });
+  },
+
+  // 让角色开始围篝火跳舞
+  startDancing(charName) {
+    const char = this.list.find(c => c.name === charName);
+    if (!char || char.isDancing || char.moveTask || char.isCooking) return;
+    char.isDancing = true;
+    // 从当前位置计算初始角度
+    char.danceAngle = Math.atan2(char.y - this.fireCy, char.x - this.fireCx);
+    char.danceSpeed = 0.35 + Math.random() * 0.15;
+    char.isWalking = false;
+    char.animState = 'dance';
+  },
+
+  // 停止跳舞，回到座位
+  stopDancing(charName) {
+    const char = this.list.find(c => c.name === charName);
+    if (!char || !char.isDancing) return;
+    char.isDancing = false;
+    char.seatX = char.x;
+    char.seatY = char.y;
+    char.animState = 'sit';
+    char.facing = char.x > this.fireCx ? -1 : 1;
+  },
+
+  // 获取正在跳舞的角色列表
+  getDancers() {
+    return this.list.filter(c => c.isDancing);
   },
 
   getNeighbors() {

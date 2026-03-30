@@ -125,8 +125,8 @@ const Interactions = {
 
     // 夜间环境萤火虫
     if (Utils.isNight()) {
-      // 自动补充萤火虫（最多8只）
-      while (this.ambientFireflies.length < 8) {
+      // 自动补充萤火虫（最多4只）
+      while (this.ambientFireflies.length < 4) {
         this.ambientFireflies.push({
           x: Utils.randFloat(20, canvasWidth - 20),
           y: Utils.randFloat(canvasHeight * 0.15, canvasHeight * 0.75),
@@ -244,20 +244,19 @@ const Interactions = {
 
   drawFireflies(ctx, time) {
     this.ambientFireflies.forEach(f => {
-      // 忽明忽暗：用 sin 做呼吸灯效果
       const glow = 0.3 + 0.7 * Math.max(0, Math.sin(f.phase));
       const alpha = glow * Math.min(1, f.life * 0.3);
-      // 光晕
-      const r = 4 + glow * 4;
+      // 固定大小光晕，只变亮度
+      const r = 4;
       const grad = ctx.createRadialGradient(f.x, f.y, 0, f.x, f.y, r);
-      grad.addColorStop(0, `rgba(200, 255, 100, ${alpha * 0.8})`);
-      grad.addColorStop(0.5, `rgba(150, 230, 60, ${alpha * 0.3})`);
+      grad.addColorStop(0, `rgba(200, 255, 100, ${alpha * 0.7})`);
+      grad.addColorStop(0.5, `rgba(150, 230, 60, ${alpha * 0.2})`);
       grad.addColorStop(1, 'rgba(100, 200, 40, 0)');
       ctx.fillStyle = grad;
       ctx.fillRect(f.x - r, f.y - r, r * 2, r * 2);
-      // 中心亮点
-      ctx.fillStyle = `rgba(230, 255, 150, ${alpha})`;
-      ctx.fillRect(Math.floor(f.x) - 1, Math.floor(f.y) - 1, 2, 2);
+      // 固定大小中心亮点
+      ctx.fillStyle = `rgba(230, 255, 150, ${alpha * 0.9})`;
+      ctx.fillRect(Math.floor(f.x), Math.floor(f.y), 1.5, 1.5);
     });
   }
 };

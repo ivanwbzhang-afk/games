@@ -89,9 +89,9 @@ const Sky = {
     }
     this._rebuildTreesFromTemplates();
 
-    // 萤火虫 - 分布在地面区域
+    // 萤火虫 - 少量分布在地面区域
     this.fireflies = [];
-    for (let i = 0; i < 15; i++) {
+    for (let i = 0; i < 6; i++) {
       this.fireflies.push({
         x: Utils.randFloat(0, canvasWidth),
         y: Utils.randFloat(this.groundY, canvasHeight * 0.85),
@@ -401,10 +401,10 @@ const Sky = {
     if (isNight) {
       this.fireflies.forEach(f => {
         const glow = 0.3 + 0.7 * (0.5 + 0.5 * Math.sin(time * 0.001 * f.glowSpeed + f.phase));
-        ctx.fillStyle = `rgba(180, 255, 100, ${glow * 0.7})`;
-        ctx.fillRect(Math.floor(f.x), Math.floor(f.y), 3, 3);
-        ctx.fillStyle = `rgba(180, 255, 100, ${glow * 0.12})`;
-        ctx.fillRect(Math.floor(f.x) - 3, Math.floor(f.y) - 3, 9, 9);
+        ctx.fillStyle = `rgba(180, 255, 100, ${glow * 0.6})`;
+        ctx.fillRect(Math.floor(f.x), Math.floor(f.y), 2, 2);
+        ctx.fillStyle = `rgba(180, 255, 100, ${glow * 0.1})`;
+        ctx.fillRect(Math.floor(f.x) - 1, Math.floor(f.y) - 1, 4, 4);
       });
     }
   },

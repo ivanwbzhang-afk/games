@@ -127,8 +127,62 @@ html, body {
   overflow: hidden;
   background: #0a0a0f;
 }
+#char-labels {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  overflow: hidden;
+}
+.char-name {
+  position: absolute;
+  font-size: 11px;
+  font-weight: 500;
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'SF Pro Text', sans-serif;
+  text-align: center;
+  white-space: nowrap;
+  transform: translateX(-50%);
+  text-shadow: 0 1px 3px rgba(0,0,0,0.7);
+  transition: opacity 0.3s;
+}
+.char-name.player { color: rgba(255, 220, 120, 0.9); }
+.char-name.npc { color: rgba(200, 200, 200, 0.6); }
+.char-bubble {
+  position: absolute;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'SF Pro Text', sans-serif;
+  color: rgba(255,255,255,0.95);
+  background: rgba(20, 20, 25, 0.82);
+  padding: 6px 14px;
+  border-radius: 100px;
+  text-align: center;
+  pointer-events: none;
+  transition: opacity 0.3s;
+}
+.char-bubble::after {
+  content: '';
+  position: absolute;
+  bottom: -5px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 5px solid rgba(20, 20, 25, 0.82);
+}
+.char-bubble.whisper {
+  background: rgba(80, 50, 130, 0.88);
+  color: rgba(220, 200, 255, 0.95);
+}
+.char-bubble.whisper::after {
+  border-top-color: rgba(80, 50, 130, 0.88);
+}
 
 #scene-canvas {
+  position: absolute;
+  top: 0; left: 0;
   display: block;
   width: 100%;
   height: 100%;
