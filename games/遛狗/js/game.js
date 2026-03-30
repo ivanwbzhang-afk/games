@@ -283,24 +283,25 @@ const Game = {
         }
       }
 
-      // 双向软约束：牵绳超长时，双方各拉回一半（1:1权重）
+      // 双向软约束：牵绳超长时，人1.2:狗0.8权重
       if (leashDist > leashMax) {
         const excess = leashDist - leashMax;
-        const pullBack = excess * 0.5; // 各承担一半
+        const ownerPull = excess * 0.4; // 人承担40%
+        const petPull = excess * 0.6;   // 狗承担60%
         const nx_dir = petDx / leashDist;
         const ny_dir = petDy / leashDist;
 
         // 主人被拉向宠物
-        const ownerNx = this.playerOwner.x + nx_dir * pullBack;
-        const ownerNy = this.playerOwner.y + ny_dir * pullBack;
+        const ownerNx = this.playerOwner.x + nx_dir * ownerPull;
+        const ownerNy = this.playerOwner.y + ny_dir * ownerPull;
         if (GameMap.isWalkable(ownerNx, ownerNy)) {
           this.playerOwner.x = ownerNx;
           this.playerOwner.y = ownerNy;
         }
 
         // 宠物被拉回主人
-        const petNx = this.playerPet.x - nx_dir * pullBack;
-        const petNy = this.playerPet.y - ny_dir * pullBack;
+        const petNx = this.playerPet.x - nx_dir * petPull;
+        const petNy = this.playerPet.y - ny_dir * petPull;
         if (GameMap.isWalkable(petNx, petNy)) {
           this.playerPet.x = petNx;
           this.playerPet.y = petNy;
