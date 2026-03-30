@@ -921,7 +921,12 @@ class Pet {
 
   render(ctx, camera) {
     const sx = this.x - camera.x;
-    const sy = this.y - camera.y;
+    let sy = this.y - camera.y;
+
+    // 弹跳偏移
+    if (this._bouncing && this._bounceOffset) {
+      sy -= this._bounceOffset;
+    }
 
     // 获取当前动画帧
     let anim = this.sprites[this.state] || this.sprites.idle;

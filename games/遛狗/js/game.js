@@ -913,11 +913,60 @@ const Game = {
   },
 
   _doPetAction(pet, act, isOwn) {
+    // 通用：生成粒子的辅助
+    const burst = (emoji, count, color) => {
+      for (let i = 0; i < count; i++) {
+        pet.particles.push({
+          x: pet.x + (Math.random()-0.5)*10,
+          y: pet.y - 10 - Math.random()*8,
+          vx: (Math.random()-0.5)*2,
+          vy: -0.8 - Math.random()*1.5,
+          life: 600 + Math.random()*300,
+          maxLife: 900,
+          color: color || '#f1c40f'
+        });
+      }
+    };
+
+    // 通用：临时状态切换（duration ms后恢复idle）
+    const tempState = (state, duration) => {
+      const prev = pet.state;
+      pet.state = state;
+      pet.animFrame = 0;
+      pet._interactAnim = true;
+      setTimeout(() => {
+        if (pet._interactAnim) {
+          pet.state = 'idle';
+          pet.animFrame = 0;
+          pet._interactAnim = false;
+        }
+      }, duration);
+    };
+
+    // 通用：弹跳动画（通过临时缩放偏移）
+    const bounce = () => {
+      pet._bounceTimer = 0;
+      pet._bouncing = true;
+      const interval = setInterval(() => {
+        pet._bounceTimer += 50;
+        if (pet._bounceTimer >= 600) {
+          pet._bouncing = false;
+          pet._bounceOffset = 0;
+          clearInterval(interval);
+        } else {
+          pet._bounceOffset = Math.sin(pet._bounceTimer / 100 * Math.PI) * 4;
+        }
+      }, 50);
+    };
+
     switch (act) {
       case 'pat':
         pet.happiness = Math.min(100, pet.happiness + 8);
         this.showNotification(`你轻轻摸了摸${pet.name}的头，它眯起了眼睛`);
         this.addSpeechBubble(pet, '😊');
+        tempState('sit', 2000); // 蹲下享受抚摸
+        burst(null, 6, '#ff9ff3');
+        bounce();
         break;
       case 'feed': {
         const food = this.inventory.find(i => i.type === 'food' && i.count > 0);
@@ -925,12 +974,18 @@ const Game = {
         this.useInventoryItem(food.id);
         pet.happiness = Math.min(100, pet.happiness + 12);
         this.showNotification(`${pet.name}吃了${food.name}，满足地舔舔嘴`);
-        for (let i = 0; i < 5; i++) {
+        this.addSpeechBubble(pet, '😋');
+        tempState('sniff', 2500); // 低头吃东西（用sniff动画模拟）
+        // 食物粒子
+        for (let i = 0; i < 8; i++) {
           pet.particles.push({
-            x: pet.x, y: pet.y-8,
-            vx: (Math.random()-0.5)*2, vy:-1-Math.random()*1.5,
-            life: 500, maxLife: 500,
-            color: ['#ff6b6b','#f1c40f','#ff9ff3'][Math.floor(Math.random()*3)]
+            x: pet.x + (Math.random()-0.5)*6,
+            y: pet.y - 6,
+            vx: (Math.random()-0.5)*1.5,
+            vy: -1.2 - Math.random()*1,
+            life: 500 + Math.random()*400,
+            maxLife: 900,
+            color: ['#ff6b6b','#f1c40f','#ff9ff3','#ffa502'][Math.floor(Math.random()*4)]
           });
         }
         break;
@@ -939,31 +994,108 @@ const Game = {
         this.showNotification(`${pet.name}转了三个圈！好厉害`);
         this.addSpeechBubble(pet, '🌀');
         pet.happiness = Math.min(100, pet.happiness + 5);
+        // 快速切换朝向模拟转圈
+        pet._interactAnim = true;
+        let spinCount = 0;
+        const spinInterval = setInterval(() => {
+          pet.facing *= -1;
+          pet.animFrame = (pet.animFrame + 1) % 2;
+          pet.state = 'walk';
+          spinCount++;
+          // 转圈粒子
+          pet.particles.push({
+            x: pet.x + Math.cos(spinCount)*8,
+            y: pet.y - 5 + Math.sin(spinCount)*5,
+            vx: Math.cos(spinCount)*1.5, vy: -0.5,
+            life: 400, maxLife: 400, color: '#54a0ff'
+          });
+          if (spinCount >= 12) {
+            clearInterval(spinInterval);
+            pet.state = 'idle';
+            pet.animFrame = 0;
+            pet._interactAnim = false;
+          }
+        }, 120);
         break;
       case 'dead':
         this.showNotification(`${pet.name}四脚朝天"装死"，然后偷看你的反应`);
         this.addSpeechBubble(pet, '😵');
         pet.happiness = Math.min(100, pet.happiness + 5);
+        tempState('dig', 3000); // dig姿态模拟趴下装死
+        // 灵魂出窍粒子
+        setTimeout(() => {
+          for (let i = 0; i < 4; i++) {
+            pet.particles.push({
+              x: pet.x + (Math.random()-0.5)*4,
+              y: pet.y - 12,
+              vx: (Math.random()-0.5)*0.5,
+              vy: -1.5 - Math.random()*0.5,
+              life: 800, maxLife: 800, color: 'rgba(255,255,255,0.6)'
+            });
+          }
+        }, 500);
         break;
       case 'shake':
         this.showNotification(`${pet.name}伸出爪子和你握手！`);
         this.addSpeechBubble(pet, '🤝');
         pet.happiness = Math.min(100, pet.happiness + 5);
+        tempState('sit', 2000);
+        bounce();
+        burst(null, 5, '#f1c40f');
+        // 闪光粒子
+        setTimeout(() => {
+          for (let i = 0; i < 6; i++) {
+            pet.particles.push({
+              x: pet.x + 6, y: pet.y - 4,
+              vx: (Math.random()-0.5)*2, vy: -1 - Math.random(),
+              life: 500, maxLife: 500, color: '#f1c40f'
+            });
+          }
+        }, 300);
         break;
       case 'sit':
         pet.state = 'sit';
+        pet.animFrame = 0;
         this.showNotification(`${pet.name}乖乖坐下了`);
+        this.addSpeechBubble(pet, '🐾');
         setTimeout(() => { if (pet.state === 'sit') pet.state = 'idle'; }, 3000);
         break;
       case 'tease':
         pet.excitement = 90;
         this.showNotification(`你在${pet.name}面前晃了晃手，它跳了起来！`);
         this.addSpeechBubble(pet, '❗');
+        bounce();
+        // 快速左右看动画
+        pet._interactAnim = true;
+        let teaseCount = 0;
+        const teaseInterval = setInterval(() => {
+          pet.facing *= -1;
+          pet.state = 'walk';
+          pet.animFrame = (pet.animFrame + 1) % 2;
+          teaseCount++;
+          if (teaseCount >= 8) {
+            clearInterval(teaseInterval);
+            pet.state = 'idle';
+            pet._interactAnim = false;
+          }
+        }, 150);
+        burst(null, 4, '#ff6b6b');
         break;
       case 'praise':
         pet.happiness = Math.min(100, pet.happiness + 5);
         this.showNotification(`你夸了夸${pet.name}，它高兴地摇尾巴`);
         this.addSpeechBubble(pet, '🥰');
+        bounce();
+        // 爱心粒子
+        for (let i = 0; i < 6; i++) {
+          pet.particles.push({
+            x: pet.x + (Math.random()-0.5)*12,
+            y: pet.y - 12 - Math.random()*6,
+            vx: (Math.random()-0.5)*1,
+            vy: -1 - Math.random(),
+            life: 700, maxLife: 700, color: '#ff6b6b'
+          });
+        }
         break;
     }
   },
