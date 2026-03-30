@@ -194,7 +194,6 @@ const Game = {
     // 摇杆驱动主人移动
     if (this.joystickActive && this.playerOwner.state !== 'sit') {
       const speed = this.playerOwner.speed;
-      const mag = Math.hypot(this.joystickDir.x, this.joystickDir.y);
       const nx = this.playerOwner.x + this.joystickDir.x * speed;
       const ny = this.playerOwner.y + this.joystickDir.y * speed;
       if (GameMap.isWalkable(nx, ny)) {
@@ -211,6 +210,16 @@ const Game = {
       if (this.playerOwner.animTimer > 300) {
         this.playerOwner.animTimer = 0;
         this.playerOwner.animFrame = (this.playerOwner.animFrame + 1) % 2;
+      }
+    } else if (!this.joystickActive && this.playerOwner.state === 'walk') {
+      // 摇杆松开时，立刻停止行走，防止抖动
+      const dx = this.playerOwner.targetX - this.playerOwner.x;
+      const dy = this.playerOwner.targetY - this.playerOwner.y;
+      if (Math.hypot(dx, dy) < 5) {
+        this.playerOwner.state = 'idle';
+        this.playerOwner.animFrame = 0;
+        this.playerOwner.targetX = this.playerOwner.x;
+        this.playerOwner.targetY = this.playerOwner.y;
       }
     }
 
@@ -255,8 +264,8 @@ const Game = {
                    this.playerOwner.targetY - this.playerOwner.y) > 3);
 
       // 无操控时：主人缓慢跟随宠物方向
-      if (!ownerMoving && leashDist > leashMax * 0.35) {
-        const followSpeed = 0.3; // 缓慢平稳的跟随速度
+      if (!ownerMoving && leashDist > leashMax * 0.5) {
+        const followSpeed = 0.3;
         const nx = this.playerOwner.x + (petDx / leashDist) * followSpeed;
         const ny = this.playerOwner.y + (petDy / leashDist) * followSpeed;
         if (GameMap.isWalkable(nx, ny)) {
@@ -265,6 +274,8 @@ const Game = {
         }
         if (Math.abs(petDx) > 1) this.playerOwner.facing = petDx > 0 ? 1 : -1;
         this.playerOwner.state = 'walk';
+        this.playerOwner.targetX = this.playerOwner.x;
+        this.playerOwner.targetY = this.playerOwner.y;
         this.playerOwner.animTimer += dt;
         if (this.playerOwner.animTimer > 400) {
           this.playerOwner.animTimer = 0;

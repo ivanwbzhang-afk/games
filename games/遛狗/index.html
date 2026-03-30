@@ -554,7 +554,16 @@
       z-index: 70; display:none;
       align-items: center; justify-content: center;
     }
-    .panel-overlay.show { display:flex; animation: popIn 0.3s cubic-bezier(0.32,0.72,0,1); }
+    .panel-overlay.show { display:flex; animation: panelFadeIn 0.25s ease-out; }
+    @keyframes panelFadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .panel-overlay.show > * { animation: panelScaleIn 0.25s cubic-bezier(0.32,0.72,0,1); }
+    @keyframes panelScaleIn {
+      from { transform: scale(0.9); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
 
     /* ===== 拍照卡片 ===== */
     .photo-card-inner {
