@@ -303,6 +303,28 @@
       </span>
     </div>
   </a>
+
+  <div style="height:80px"></div>
+
+  <a class="exp-card" href="games/campfire/index.html">
+    <div class="exp-visual">
+      <canvas id="cv2"></canvas>
+    </div>
+    <div class="exp-body">
+      <p class="exp-num">No. 002</p>
+      <h2 class="exp-title">永恒篝火</h2>
+      <p class="exp-desc">在一片空地中央，有一堆等待被点燃的篝火。陌生人围坐在一起，添柴、烤食物、写纸条、说悄悄话——火焰终将熄灭，但这一刻的温暖是真实的。</p>
+      <div class="exp-tags">
+        <span class="exp-tag live">进行中</span>
+        <span class="exp-tag">围炉夜话</span>
+        <span class="exp-tag">匿名陪伴</span>
+      </div>
+      <span class="exp-link">
+        参与这个实验
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5L10.5 8 6 12.5"/></svg>
+      </span>
+    </div>
+  </a>
 </section>
 
 <div class="divider"></div>
@@ -454,6 +476,157 @@
       x.beginPath();
       x.arc(fx+Math.sin(f*0.012+i)*8, fy+Math.cos(f*0.015+i)*5, 1.2,0,Math.PI*2);
       x.fill();
+    }
+
+    f++;
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// 篝火预览 canvas
+(function(){
+  const c = document.getElementById('cv2');
+  if(!c) return;
+  const p = c.parentElement.getBoundingClientRect();
+  const d = window.devicePixelRatio||1;
+  c.width = p.width*d;
+  c.height = p.height*d;
+  const x = c.getContext('2d');
+  x.scale(d,d);
+  const W = p.width, H = p.height;
+  let f = 0;
+
+  // 预计算
+  const stars = Array.from({length:25},(_,i)=>[
+    (i*137.5+42)%W, ((i*89.3+13)%(H*0.35)), Math.random()*6.28
+  ]);
+  const grassDots = Array.from({length:80},(_,i)=>[
+    (i*37.7+5)%W, H*0.48+((i*23.3+7)%(H*0.5))
+  ]);
+  // 固定的围坐角色
+  const chars = [
+    { angle: 0.4, color: '#5a7abf' },
+    { angle: 1.5, color: '#8a5a5a' },
+    { angle: 2.6, color: '#5a8a5a' },
+    { angle: 3.8, color: '#8a7a5a' },
+    { angle: 5.2, color: '#7a5a8a' },
+  ];
+
+  function draw(){
+    x.clearRect(0,0,W,H);
+    const t = f*0.008;
+
+    // 天空渐变
+    const g = x.createLinearGradient(0,0,0,H);
+    g.addColorStop(0,'#0a0e28');
+    g.addColorStop(0.3,'#141a38');
+    g.addColorStop(0.5,'#1a2018');
+    g.addColorStop(1,'#121a10');
+    x.fillStyle=g;
+    x.fillRect(0,0,W,H);
+
+    // 星星
+    stars.forEach(([sx,sy,off])=>{
+      const a = 0.15+0.5*Math.abs(Math.sin(f*0.012+off));
+      x.fillStyle=`rgba(255,255,240,${a})`;
+      x.fillRect(sx,sy,1.2,1.2);
+    });
+
+    // 月亮
+    x.fillStyle='rgba(230,230,210,0.7)';
+    x.beginPath(); x.arc(W*0.82,H*0.12,8,0,Math.PI*2); x.fill();
+    x.fillStyle='rgba(230,230,210,0.04)';
+    x.beginPath(); x.arc(W*0.82,H*0.12,22,0,Math.PI*2); x.fill();
+
+    // 远景树林轮廓
+    x.fillStyle='#0e1a0c';
+    x.beginPath();
+    x.moveTo(0,H*0.42);
+    for(let i=0;i<=W;i+=4){
+      const th = Math.abs(Math.sin(i*0.025))*14 + Math.abs(Math.sin(i*0.06+1))*7;
+      x.lineTo(i, H*0.42 - th);
+    }
+    x.lineTo(W,H*0.48); x.lineTo(0,H*0.48);
+    x.fill();
+
+    // 地面
+    x.fillStyle='#142010';
+    x.fillRect(0,H*0.45,W,H*0.55);
+    x.fillStyle='rgba(30,50,20,0.3)';
+    grassDots.forEach(([gx,gy])=> x.fillRect(gx,gy,1.5,1.5));
+
+    // 篝火光晕
+    const fireCx = W*0.5, fireCy = H*0.58;
+    const flicker = 0.85 + 0.15*Math.sin(t*3);
+    const glowR = 80*flicker;
+    const glow = x.createRadialGradient(fireCx, fireCy-4, 0, fireCx, fireCy, glowR);
+    glow.addColorStop(0, `rgba(255,180,60,${0.18*flicker})`);
+    glow.addColorStop(0.4, `rgba(255,120,30,${0.08*flicker})`);
+    glow.addColorStop(1, 'rgba(255,80,10,0)');
+    x.fillStyle = glow;
+    x.beginPath(); x.arc(fireCx, fireCy, glowR, 0, Math.PI*2); x.fill();
+
+    // 石头圈
+    for(let i=0;i<10;i++){
+      const a = i/10*Math.PI*2;
+      const sx = fireCx + Math.cos(a)*22;
+      const sy = fireCy + 4 + Math.sin(a)*9;
+      x.fillStyle='rgb(60,58,52)';
+      x.fillRect(sx-2,sy-1.5,4,3);
+    }
+
+    // 柴火
+    x.fillStyle='#3a2510';
+    x.fillRect(fireCx-12,fireCy+2,24,4);
+    x.fillRect(fireCx-8,fireCy-1,18,3);
+
+    // 火焰
+    for(let i=0;i<3;i++){
+      const fh = (18+i*6)*flicker;
+      const fw = 4+i*3;
+      const sway = Math.sin(t*4+i*2)*3;
+      const alpha = [0.8,0.5,0.25][i];
+      const colors = ['rgba(255,240,180,A)','rgba(255,160,50,A)','rgba(200,60,15,A)'];
+      x.fillStyle = colors[i].replace('A',alpha*flicker);
+      x.beginPath();
+      x.moveTo(fireCx-fw+sway, fireCy);
+      x.quadraticCurveTo(fireCx+sway, fireCy-fh, fireCx+fw+sway, fireCy);
+      x.fill();
+    }
+
+    // 火星
+    for(let i=0;i<4;i++){
+      const ex = fireCx + Math.sin(t*2+i*1.7)*12;
+      const ey = fireCy - 18 - Math.abs(Math.sin(t*1.5+i*2.3))*20;
+      const ea = 0.3+0.5*Math.abs(Math.sin(f*0.02+i));
+      x.fillStyle=`rgba(255,180,50,${ea})`;
+      x.fillRect(ex,ey,1.5,1.5);
+    }
+
+    // 围坐的角色
+    chars.forEach(ch => {
+      const cx = fireCx + Math.cos(ch.angle)*48;
+      const cy = fireCy + Math.sin(ch.angle)*22;
+      // 身体
+      x.fillStyle = ch.color;
+      x.fillRect(cx-2, cy-2, 5, 5);
+      // 头
+      x.fillStyle = '#e8c090';
+      x.fillRect(cx-1.5, cy-6, 4, 4);
+      // 腿（盘坐）
+      x.fillStyle = '#2a3a4a';
+      x.fillRect(cx-4, cy+3, 4, 2);
+      x.fillRect(cx+1, cy+3, 4, 2);
+    });
+
+    // 烟
+    for(let i=0;i<3;i++){
+      const sx = fireCx + Math.sin(t+i*1.5)*5;
+      const sy = fireCy - 30 - i*12 - Math.sin(t*0.5+i)*4;
+      const sa = 0.04+0.03*Math.sin(f*0.01+i);
+      x.fillStyle=`rgba(120,115,110,${sa})`;
+      x.beginPath(); x.arc(sx,sy,4+i*2,0,Math.PI*2); x.fill();
     }
 
     f++;
