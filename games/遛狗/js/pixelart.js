@@ -290,6 +290,44 @@ const PARTICLE_COLORS = ['#f1c40f', '#f39c12', '#e67e22', '#d4ac0d'];
 
 // ===== 场景元素 =====
 const SCENE_SPRITES = {
+  // 大树 - 更大更茂密的树冠
+  bigTree: [
+    [_,_,_,_,_,_,_,_,Tl,Tl,Tl,Tl,_,_,_,_,_,_,_],
+    [_,_,_,_,_,Tl,Tl,T2,Tl,T3,Tl,Tl,Tl,_,_,_,_,_,_],
+    [_,_,_,Tl,Tl,T3,Tl,Tl,T2,Tl,Tl,T3,Tl,Tl,_,_,_,_,_],
+    [_,_,Tl,Tl,T2,Tl,T3,Tl,Tl,Tl,T2,Tl,Tl,T3,Tl,_,_,_,_],
+    [_,Tl,T3,Tl,Tl,Tl,Tl,T2,Tl,T3,Tl,Tl,Tl,Tl,T2,Tl,_,_,_],
+    [Tl,Tl,Tl,T2,Tl,T3,Tl,Tl,Tl,Tl,Tl,T3,T2,Tl,Tl,Tl,Tl,_,_],
+    [Tl,T2,Tl,Tl,T3,Tl,Tl,T2,Tl,Tl,T3,Tl,Tl,Tl,T2,Tl,Tl,_,_],
+    [_,Tl,Tl,T3,Tl,Tl,Tl,Tl,T3,Tl,Tl,Tl,T2,Tl,Tl,Tl,_,_,_],
+    [_,_,Tl,Tl,Tl,T2,Tl,Tl,Tl,Tl,T2,Tl,Tl,Tl,_,_,_,_,_],
+    [_,_,_,_,Tl,Tl,Tl,Tl,Tl,Tl,Tl,Tl,_,_,_,_,_,_,_],
+    [_,_,_,_,_,_,_,_,Tk,Tk,Tk,_,_,_,_,_,_,_,_],
+    [_,_,_,_,_,_,_,Tk,Tk,Tk,Tk,Tk,_,_,_,_,_,_,_],
+    [_,_,_,_,_,_,_,Tk,Tl2,Tl2,Tl2,Tk,_,_,_,_,_,_,_],
+  ],
+  // 圆形树 - 更圆润的中等树
+  roundTree: [
+    [_,_,_,_,_,Tl,Tl,Tl,Tl,Tl,_,_,_,_,_],
+    [_,_,_,Tl,Tl,T3,Tl,T2,Tl,T3,Tl,Tl,_,_,_],
+    [_,_,Tl,T2,Tl,Tl,T3,Tl,Tl,Tl,T2,Tl,_,_,_],
+    [_,Tl,Tl,Tl,T3,Tl,Tl,T2,Tl,T3,Tl,Tl,Tl,_,_],
+    [_,Tl,T3,Tl,Tl,T2,Tl,Tl,T3,Tl,Tl,T2,Tl,_,_],
+    [_,Tl,Tl,T2,Tl,Tl,Tl,T3,Tl,Tl,T2,Tl,Tl,_,_],
+    [_,_,Tl,Tl,T3,Tl,Tl,Tl,Tl,T3,Tl,_,_,_,_],
+    [_,_,_,Tl,Tl,Tl,Tl,Tl,Tl,Tl,_,_,_,_,_],
+    [_,_,_,_,_,_,Tk,Tk,_,_,_,_,_,_,_],
+    [_,_,_,_,_,_,Tk,Tk,_,_,_,_,_,_,_],
+    [_,_,_,_,_,Tk,Tk,Tk,Tk,_,_,_,_,_,_],
+  ],
+  // 灌木丛 - 低矮茂密
+  bush: [
+    [_,_,T3,T3,T3,T3,_,_],
+    [_,T3,Tl,T3,Tl,T3,T3,_],
+    [T3,Tl,T3,Tl,T3,Tl,T3,T3],
+    [T3,T3,Tl,T3,Tl,T3,Tl,T3],
+    [_,T3,T3,T3,T3,T3,T3,_],
+  ],
   tree: [
     [_,_,_,_,_,_,Tl,Tl,Tl,_,_,_,_,_,_],
     [_,_,_,_,Tl,Tl,T2,Tl,Tl,Tl,_,_,_,_,_],

@@ -191,6 +191,29 @@ const Game = {
   },
 
   _update(dt) {
+    // 摇杆驱动主人移动
+    if (this.joystickActive && this.playerOwner.state !== 'sit') {
+      const speed = this.playerOwner.speed;
+      const mag = Math.hypot(this.joystickDir.x, this.joystickDir.y);
+      const nx = this.playerOwner.x + this.joystickDir.x * speed;
+      const ny = this.playerOwner.y + this.joystickDir.y * speed;
+      if (GameMap.isWalkable(nx, ny)) {
+        this.playerOwner.x = nx;
+        this.playerOwner.y = ny;
+      }
+      if (Math.abs(this.joystickDir.x) > 0.1) {
+        this.playerOwner.facing = this.joystickDir.x > 0 ? 1 : -1;
+      }
+      this.playerOwner.state = 'walk';
+      this.playerOwner.targetX = this.playerOwner.x;
+      this.playerOwner.targetY = this.playerOwner.y;
+      this.playerOwner.animTimer += dt;
+      if (this.playerOwner.animTimer > 300) {
+        this.playerOwner.animTimer = 0;
+        this.playerOwner.animFrame = (this.playerOwner.animFrame + 1) % 2;
+      }
+    }
+
     // 更新主人
     this.playerOwner.update(dt);
 
@@ -226,9 +249,10 @@ const Game = {
       const leashMax = this.playerPet.leashLength;
 
       // 用户是否在手动控制主人
-      const ownerMoving = this.playerOwner.state === 'walk' &&
+      const ownerMoving = this.joystickActive ||
+        (this.playerOwner.state === 'walk' &&
         Math.hypot(this.playerOwner.targetX - this.playerOwner.x,
-                   this.playerOwner.targetY - this.playerOwner.y) > 3;
+                   this.playerOwner.targetY - this.playerOwner.y) > 3);
 
       // 无操控时：主人缓慢跟随宠物方向
       if (!ownerMoving && leashDist > leashMax * 0.35) {
@@ -525,8 +549,61 @@ const Game = {
   _bindInput() {
     const canvas = this.canvas;
 
-    // 触摸/点击移动
-    const handleMove = (clientX, clientY) => {
+    // ===== 虚拟摇杆 =====
+    const joystick = document.getElementById('joystick');
+    const knob = document.getElementById('joystickKnob');
+    joystick.style.display = 'block';
+
+    this.joystickDir = { x: 0, y: 0 };
+    this.joystickActive = false;
+
+    const joyRect = () => joystick.getBoundingClientRect();
+    const joyRadius = 50;
+    const knobMaxDist = 30;
+
+    const handleJoyMove = (cx, cy) => {
+      const r = joyRect();
+      const centerX = r.left + r.width / 2;
+      const centerY = r.top + r.height / 2;
+      let dx = cx - centerX;
+      let dy = cy - centerY;
+      const dist = Math.hypot(dx, dy);
+      if (dist > knobMaxDist) {
+        dx = (dx / dist) * knobMaxDist;
+        dy = (dy / dist) * knobMaxDist;
+      }
+      knob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+      this.joystickDir.x = dx / knobMaxDist;
+      this.joystickDir.y = dy / knobMaxDist;
+      this.joystickActive = Math.hypot(this.joystickDir.x, this.joystickDir.y) > 0.15;
+    };
+
+    const handleJoyEnd = () => {
+      knob.style.transform = 'translate(-50%, -50%)';
+      this.joystickDir.x = 0;
+      this.joystickDir.y = 0;
+      this.joystickActive = false;
+    };
+
+    joystick.addEventListener('touchstart', (e) => {
+      e.preventDefault(); e.stopPropagation();
+      handleJoyMove(e.touches[0].clientX, e.touches[0].clientY);
+    }, { passive: false });
+    joystick.addEventListener('touchmove', (e) => {
+      e.preventDefault(); e.stopPropagation();
+      handleJoyMove(e.touches[0].clientX, e.touches[0].clientY);
+    }, { passive: false });
+    joystick.addEventListener('touchend', (e) => { e.preventDefault(); handleJoyEnd(); });
+    joystick.addEventListener('touchcancel', handleJoyEnd);
+
+    // PC鼠标支持
+    let joyMouseDown = false;
+    joystick.addEventListener('mousedown', (e) => { joyMouseDown = true; handleJoyMove(e.clientX, e.clientY); });
+    document.addEventListener('mousemove', (e) => { if (joyMouseDown) handleJoyMove(e.clientX, e.clientY); });
+    document.addEventListener('mouseup', () => { if (joyMouseDown) { joyMouseDown = false; handleJoyEnd(); } });
+
+    // 点击画布用于交互检测（宠物/NPC/长椅），不用于移动
+    const handleTap = (clientX, clientY) => {
       if (!this.running) return;
       if (Interaction.playSessionActive) return;
 
@@ -534,52 +611,27 @@ const Game = {
       const x = (clientX - rect.left) / this.zoom + this.camera.x;
       const y = (clientY - rect.top) / this.zoom + this.camera.y;
 
-      // 检测是否点击了自家宠物 → 互动面板
+      // 检测宠物点击
       const ownPetDist = Math.hypot(this.playerPet.x - x, this.playerPet.y - y);
-      if (ownPetDist < 22) {
-        this.openPetPanel(this.playerPet, true);
-        return;
-      }
-
-      // 检测是否点击了NPC宠物 → 互动面板（他人模式）
+      if (ownPetDist < 22) { this.openPetPanel(this.playerPet, true); return; }
       for (const npc of this.npcOwners) {
         const pd = Math.hypot(npc.pet.x - x, npc.pet.y - y);
-        if (pd < 22) {
-          this.openPetPanel(npc.pet, false);
-          return;
-        }
+        if (pd < 22) { this.openPetPanel(npc.pet, false); return; }
       }
 
-      // 检测是否点击了长椅
+      // 检测长椅
       const bench = GameMap.getBenchAt(x, y, 25);
       if (bench) {
         if (this.playerOwner.state === 'sit') {
           this.playerOwner.state = 'idle';
-          this.showNotification('站起来继续散步~');
           return;
         }
         this.playerOwner.walkToAndSit(bench.x + 12, bench.y - 2);
-        this.showNotification('去长椅上坐会儿~');
         return;
       }
-
-      if (this.playerOwner.state === 'sit') {
-        this.playerOwner.state = 'idle';
-      }
-
-      this.touchTarget = { x, y };
-      this.playerOwner.moveTo(x, y);
     };
 
-    canvas.addEventListener('click', (e) => handleMove(e.clientX, e.clientY));
-    canvas.addEventListener('touchstart', (e) => {
-      e.preventDefault();
-      handleMove(e.touches[0].clientX, e.touches[0].clientY);
-    }, { passive: false });
-    canvas.addEventListener('touchmove', (e) => {
-      e.preventDefault();
-      handleMove(e.touches[0].clientX, e.touches[0].clientY);
-    }, { passive: false });
+    canvas.addEventListener('click', (e) => handleTap(e.clientX, e.clientY));
 
     // 背包按钮 → 打开背包面板
     document.getElementById('bagBtn').addEventListener('click', () => {

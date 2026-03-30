@@ -641,6 +641,34 @@
     .pp-act .pa-icon { font-size:24px; }
     .pp-act .pa-label { font-size:11px; color:var(--qq-text-sec); }
 
+    /* 虚拟摇杆 */
+    #joystick {
+      position: fixed;
+      bottom: 90px;
+      left: 30px;
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.08);
+      border: 1.5px solid rgba(255,255,255,0.15);
+      z-index: 50;
+      touch-action: none;
+      display: none; /* 进入游戏后显示 */
+    }
+    #joystickKnob {
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.25);
+      border: 1px solid rgba(255,255,255,0.3);
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      transition: none;
+    }
+
     /* 返回首页按钮 */
     .back-home {
       position: fixed;
@@ -710,6 +738,10 @@
   <!-- 游戏主界面 -->
   <div id="app">
     <canvas id="gameCanvas"></canvas>
+    <!-- 虚拟摇杆 -->
+    <div id="joystick">
+      <div id="joystickKnob"></div>
+    </div>
     <!-- 常驻底部输入栏（非聊天模式也可见） -->
     <div id="worldInputBar" class="hidden">
       <input id="worldInput" type="text" placeholder="说点什么..." maxlength="60">
