@@ -231,82 +231,20 @@ const GameMap = {
     );
   },
 
-  // ===== 渲染（夜景） =====
+  // ===== 渲染（俯视夜景） =====
   render(ctx, camera) {
     const { x: cx, y: cy, w: cw, h: ch } = camera;
     const t = Date.now() / 1000;
 
-    // 地平线位置（相对屏幕）
-    const horizonWorld = 420; // 世界坐标中的地平线
-    const horizonScreen = horizonWorld - cy;
-
-    // 1) 天空渐变
-    const skyGrd = ctx.createLinearGradient(0, 0, 0, Math.max(horizonScreen + 40, ch));
-    skyGrd.addColorStop(0, '#0c0c1a');
-    skyGrd.addColorStop(0.3, '#1a1430');
-    skyGrd.addColorStop(0.6, '#2a2040');
-    skyGrd.addColorStop(1, '#1a3028');
-    ctx.fillStyle = skyGrd;
+    // 1) 全屏草地（俯视，无天空）
+    const grassGrd = ctx.createLinearGradient(0, 0, 0, ch);
+    grassGrd.addColorStop(0, '#1a3a24');
+    grassGrd.addColorStop(0.5, '#1e4a2a');
+    grassGrd.addColorStop(1, '#162e1e');
+    ctx.fillStyle = grassGrd;
     ctx.fillRect(0, 0, cw, ch);
 
-    // 2) 星星（只在天空区域绘制）
-    for (const star of this._stars) {
-      const sx = star.x - cx, sy = star.y - cy;
-      if (sx < -5 || sx > cw + 5 || sy < -5 || sy > horizonScreen + 20) continue;
-      const twinkle = 0.15 + 0.6 * Math.abs(Math.sin(t * star.speed * 6 + star.phase));
-      ctx.fillStyle = `rgba(255,255,255,${twinkle})`;
-      ctx.fillRect(sx, sy, star.size, star.size);
-    }
-
-    // 3) 月亮（固定在视口右上角区域）
-    const moonX = cw * 0.8;
-    const moonY = 60 - cy * 0.02;
-    if (moonY > -50 && moonY < ch * 0.5) {
-      // 月亮光晕
-      ctx.fillStyle = 'rgba(255,252,230,0.05)';
-      ctx.beginPath();
-      ctx.arc(moonX, moonY, 50, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = 'rgba(255,252,230,0.1)';
-      ctx.beginPath();
-      ctx.arc(moonX, moonY, 30, 0, Math.PI * 2);
-      ctx.fill();
-      // 月亮本体
-      ctx.fillStyle = 'rgba(255,252,230,0.9)';
-      ctx.beginPath();
-      ctx.arc(moonX, moonY, 16, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    // 4) 远山剪影
-    const hillY = horizonScreen - 30;
-    if (hillY < ch + 60) {
-      ctx.fillStyle = '#111a18';
-      ctx.beginPath();
-      ctx.moveTo(0, hillY + 40);
-      for (let x = 0; x <= cw; x += 2) {
-        const wx = x + cx;
-        const h = Math.sin(wx * 0.003) * 25 + Math.sin(wx * 0.007) * 15 + Math.cos(wx * 0.002) * 20;
-        ctx.lineTo(x, hillY - h);
-      }
-      ctx.lineTo(cw, hillY + 80);
-      ctx.lineTo(0, hillY + 80);
-      ctx.closePath();
-      ctx.fill();
-    }
-
-    // 5) 草地
-    const grassTop = horizonScreen + 10;
-    if (grassTop < ch) {
-      const grassGrd = ctx.createLinearGradient(0, Math.max(0, grassTop), 0, ch);
-      grassGrd.addColorStop(0, '#1c3c26');
-      grassGrd.addColorStop(0.3, '#1e4a2a');
-      grassGrd.addColorStop(1, '#0e2418');
-      ctx.fillStyle = grassGrd;
-      ctx.fillRect(0, Math.max(0, grassTop), cw, ch - Math.max(0, grassTop));
-    }
-
-    // 6) 草地细节纹理（暗色调）
+    // 2) 草地细节纹理
     for (const g of this._grassDetails) {
       if (g.x < cx - 10 || g.x > cx + cw + 10 || g.y < cy - 10 || g.y > cy + ch + 10) continue;
       const sx = g.x - cx, sy = g.y - cy;
@@ -334,7 +272,7 @@ const GameMap = {
       }
     }
 
-    // 7) 落叶（暗色调）
+    // 3) 落叶
     for (const l of this._leaves) {
       if (l.x < cx - 5 || l.x > cx + cw + 5 || l.y < cy - 5 || l.y > cy + ch + 5) continue;
       ctx.globalAlpha = 0.4;
@@ -347,24 +285,32 @@ const GameMap = {
       ctx.globalAlpha = 1;
     }
 
-    // 8) 小径（暗色调）
+    // 4) 小径
     this._renderPaths(ctx, camera);
 
-    // 9) 湖泊
+    // 5) 湖泊
     this._renderLake(ctx, camera);
 
-    // 10) 路灯（下层光晕 - 在地标之前渲染地面光）
+    // 6) 路灯地面光晕
     for (const lamp of this._lamps) {
       if (lamp.x < cx - 80 || lamp.x > cx + cw + 80 || lamp.y < cy - 80 || lamp.y > cy + ch + 80) continue;
       const lx = lamp.x - cx, ly = lamp.y - cy;
-      // 地面光晕
-      ctx.fillStyle = 'rgba(255,220,100,0.04)';
+      const glow = ctx.createRadialGradient(lx, ly, 2, lx, ly, 45);
+      glow.addColorStop(0, 'rgba(255,220,100,0.08)');
+      glow.addColorStop(0.5, 'rgba(255,220,100,0.03)');
+      glow.addColorStop(1, 'rgba(255,220,100,0)');
+      ctx.fillStyle = glow;
       ctx.beginPath();
-      ctx.ellipse(lx, ly + 14, 40, 20, 0, 0, Math.PI * 2);
+      ctx.arc(lx, ly, 45, 0, Math.PI * 2);
+      ctx.fill();
+      // 灯柱（俯视为小圆点）
+      ctx.fillStyle = 'rgba(255,220,120,0.7)';
+      ctx.beginPath();
+      ctx.arc(lx, ly, 3, 0, Math.PI * 2);
       ctx.fill();
     }
 
-    // 11) 地标（按y排序）
+    // 7) 地标（按y排序）
     const sorted = [...this.landmarks].sort((a, b) => a.y - b.y);
     for (const lm of sorted) {
       if (lm.x < cx - 60 || lm.x > cx + cw + 60 || lm.y < cy - 60 || lm.y > cy + ch + 60) continue;
@@ -380,33 +326,10 @@ const GameMap = {
       }
     }
 
-    // 12) 路灯（灯杆 + 灯头 + 上层光晕）
-    for (const lamp of this._lamps) {
-      if (lamp.x < cx - 50 || lamp.x > cx + cw + 50 || lamp.y < cy - 60 || lamp.y > cy + ch + 30) continue;
-      const lx = lamp.x - cx, ly = lamp.y - cy;
-      // 灯杆
-      ctx.fillStyle = '#4a4a4a';
-      ctx.fillRect(lx - 1, ly - 28, 2, 42);
-      // 灯头
-      ctx.fillStyle = 'rgba(255,220,120,0.9)';
-      ctx.beginPath();
-      ctx.arc(lx, ly - 28, 3.5, 0, Math.PI * 2);
-      ctx.fill();
-      // 灯光光晕
-      const glow = ctx.createRadialGradient(lx, ly - 20, 2, lx, ly - 10, 35);
-      glow.addColorStop(0, 'rgba(255,220,100,0.12)');
-      glow.addColorStop(0.5, 'rgba(255,220,100,0.04)');
-      glow.addColorStop(1, 'rgba(255,220,100,0)');
-      ctx.fillStyle = glow;
-      ctx.beginPath();
-      ctx.arc(lx, ly - 10, 35, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    // 13) 萤火虫
+    // 8) 萤火虫
     for (let i = 0; i < 15; i++) {
       const fx = ((i * 137.5 + 50) % this.WIDTH);
-      const fy = 450 + ((i * 89.3 + 30) % (this.HEIGHT - 500));
+      const fy = ((i * 89.3 + 30) % this.HEIGHT);
       if (fx < cx - 20 || fx > cx + cw + 20 || fy < cy - 20 || fy > cy + ch + 20) continue;
       const flicker = 0.15 + 0.55 * Math.abs(Math.sin(t * 1.5 + i * 2.1));
       ctx.fillStyle = `rgba(180,230,100,${flicker})`;
@@ -419,7 +342,7 @@ const GameMap = {
       ctx.fill();
     }
 
-    // 14) 气味标记
+    // 9) 气味标记
     for (const mark of this.scentMarks) {
       if (mark.x < cx - 10 || mark.x > cx + cw + 10 || mark.y < cy - 10 || mark.y > cy + ch + 10) continue;
       ctx.globalAlpha = mark.alpha || 0.3;

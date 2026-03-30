@@ -218,48 +218,58 @@ const Game = {
     // 更新气味标记
     GameMap.updateScentMarks();
 
-    // ===== 牵绳物理：宠物拥有最高移动权，强制拖着主人走 =====
+    // ===== 牵绳物理：人和宠物1:1平等权重 =====
     if (!this.playerPet.interacting) {
       const petDx = this.playerPet.x - this.playerOwner.x;
       const petDy = this.playerPet.y - this.playerOwner.y;
       const leashDist = Math.hypot(petDx, petDy);
       const leashMax = this.playerPet.leashLength;
 
-      // 只要宠物在移动（walk/sniff目标/surprise），主人就被拖着走
-      const petMoving = this.playerPet.state === 'walk' ||
-                        this.playerPet.state === 'surprise' ||
-                        (this.playerPet.state === 'sniff' && leashDist > leashMax * 0.6);
+      // 用户是否在手动控制主人
+      const ownerMoving = this.playerOwner.state === 'walk' &&
+        Math.hypot(this.playerOwner.targetX - this.playerOwner.x,
+                   this.playerOwner.targetY - this.playerOwner.y) > 3;
 
-      if (petMoving && leashDist > leashMax * 0.4) {
-        // 拉力随距离增大：越远拉力越强，超过牵绳长度时强制同步
-        const tension = Math.min(1, (leashDist - leashMax * 0.4) / (leashMax * 0.6));
-        const pullSpeed = this.playerPet.speed * tension;
-        const nx = this.playerOwner.x + (petDx / leashDist) * pullSpeed;
-        const ny = this.playerOwner.y + (petDy / leashDist) * pullSpeed;
-
+      // 无操控时：主人缓慢跟随宠物方向
+      if (!ownerMoving && leashDist > leashMax * 0.35) {
+        const followSpeed = 0.3; // 缓慢平稳的跟随速度
+        const nx = this.playerOwner.x + (petDx / leashDist) * followSpeed;
+        const ny = this.playerOwner.y + (petDy / leashDist) * followSpeed;
         if (GameMap.isWalkable(nx, ny)) {
           this.playerOwner.x = nx;
           this.playerOwner.y = ny;
         }
         if (Math.abs(petDx) > 1) this.playerOwner.facing = petDx > 0 ? 1 : -1;
-
-        // 主人表现为被拖着走的状态
         this.playerOwner.state = 'walk';
-        this.playerOwner.targetX = this.playerOwner.x;
-        this.playerOwner.targetY = this.playerOwner.y;
-        // 更新动画
         this.playerOwner.animTimer += dt;
-        if (this.playerOwner.animTimer > 300) {
+        if (this.playerOwner.animTimer > 400) {
           this.playerOwner.animTimer = 0;
           this.playerOwner.animFrame = (this.playerOwner.animFrame + 1) % 2;
         }
       }
 
-      // 硬约束：牵绳不能超过最大长度的1.5倍（防止极端情况）
-      if (leashDist > leashMax * 1.5) {
-        const ratio = (leashMax * 1.2) / leashDist;
-        this.playerOwner.x = this.playerPet.x - petDx * ratio;
-        this.playerOwner.y = this.playerPet.y - petDy * ratio;
+      // 双向软约束：牵绳超长时，双方各拉回一半（1:1权重）
+      if (leashDist > leashMax) {
+        const excess = leashDist - leashMax;
+        const pullBack = excess * 0.5; // 各承担一半
+        const nx_dir = petDx / leashDist;
+        const ny_dir = petDy / leashDist;
+
+        // 主人被拉向宠物
+        const ownerNx = this.playerOwner.x + nx_dir * pullBack;
+        const ownerNy = this.playerOwner.y + ny_dir * pullBack;
+        if (GameMap.isWalkable(ownerNx, ownerNy)) {
+          this.playerOwner.x = ownerNx;
+          this.playerOwner.y = ownerNy;
+        }
+
+        // 宠物被拉回主人
+        const petNx = this.playerPet.x - nx_dir * pullBack;
+        const petNy = this.playerPet.y - ny_dir * pullBack;
+        if (GameMap.isWalkable(petNx, petNy)) {
+          this.playerPet.x = petNx;
+          this.playerPet.y = petNy;
+        }
       }
     }
 
