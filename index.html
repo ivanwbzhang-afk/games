@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ivan 的游戏小站</title>
+  <style>
+    :root {
+      --bg: #0a0a1a;
+      --bg-card: #16162a;
+      --bg-card-hover: #1e1e3a;
+      --accent: #6c5ce7;
+      --accent-light: #a29bfe;
+      --text: #f0f0f0;
+      --text-sec: #8888aa;
+      --radius: 16px;
+      --font: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* 背景动画 */
+    .bg-glow {
+      position: fixed;
+      top: -200px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(108,92,231,0.15) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* 顶部 */
+    .header {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      padding: 60px 20px 40px;
+    }
+
+    .header h1 {
+      font-size: 32px;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--accent-light), #74b9ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 12px;
+    }
+
+    .header p {
+      color: var(--text-sec);
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    /* 游戏网格 */
+    .games-grid {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 24px;
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 0 20px 80px;
+    }
+
+    /* 游戏卡片 */
+    .game-card {
+      background: var(--bg-card);
+      border-radius: var(--radius);
+      overflow: hidden;
+      transition: all 0.3s ease;
+      cursor: pointer;
+      text-decoration: none;
+      color: inherit;
+      display: block;
+      border: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .game-card:hover {
+      background: var(--bg-card-hover);
+      transform: translateY(-4px);
+      border-color: rgba(108,92,231,0.3);
+      box-shadow: 0 12px 40px rgba(108,92,231,0.15);
+    }
+
+    .game-cover {
+      width: 100%;
+      aspect-ratio: 16 / 10;
+      overflow: hidden;
+      position: relative;
+      background: #1a1a2e;
+    }
+
+    .game-cover canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .game-tag {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: var(--accent);
+      color: white;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 20px;
+    }
+
+    .game-info {
+      padding: 20px;
+    }
+
+    .game-info h3 {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .game-info p {
+      color: var(--text-sec);
+      font-size: 13px;
+      line-height: 1.5;
+      margin-bottom: 16px;
+    }
+
+    .game-meta {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font-size: 12px;
+      color: var(--text-sec);
+    }
+
+    .game-meta span {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .play-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-left: auto;
+      background: var(--accent);
+      color: white;
+      border: none;
+      padding: 8px 18px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .play-btn:hover {
+      background: var(--accent-light);
+      transform: scale(1.05);
+    }
+
+    /* 底部 */
+    .footer {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-sec);
+      font-size: 13px;
+      border-top: 1px solid rgba(255,255,255,0.05);
+    }
+
+    /* coming soon 卡片 */
+    .game-card.coming-soon {
+      opacity: 0.5;
+      pointer-events: none;
+    }
+
+    .game-card.coming-soon .game-cover {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 48px;
+    }
+
+    /* 移动端适配 */
+    @media (max-width: 640px) {
+      .header { padding: 40px 16px 24px; }
+      .header h1 { font-size: 26px; }
+      .games-grid { gap: 16px; padding: 0 16px 60px; grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-glow"></div>
+
+  <div class="header">
+    <h1>🎮 Ivan 的游戏小站</h1>
+    <p>一些好玩的小游戏，点击即玩，无需下载</p>
+  </div>
+
+  <div class="games-grid">
+    <!-- 遛狗公园 -->
+    <a class="game-card" href="games/遛狗/index.html">
+      <div class="game-cover">
+        <canvas id="dog-cover"></canvas>
+        <span class="game-tag">像素风</span>
+      </div>
+      <div class="game-info">
+        <h3>🐕 遛狗公园</h3>
+        <p>在像素风公园里遛狗散步，和其他狗主人偶遇互动，体验温馨的虚拟养宠生活</p>
+        <div class="game-meta">
+          <span>🎨 像素风</span>
+          <span>🐾 休闲</span>
+          <button class="play-btn">▶ 开始游戏</button>
+        </div>
+      </div>
+    </a>
+
+    <!-- 即将推出占位 -->
+    <div class="game-card coming-soon">
+      <div class="game-cover">🚀</div>
+      <div class="game-info">
+        <h3>更多游戏</h3>
+        <p>敬请期待...</p>
+        <div class="game-meta">
+          <span>Coming Soon</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    Made with ❤️ by Ivan · 2026
+  </div>
+
+  <script>
+    // 遛狗封面 —— 画一个迷你像素风公园场景
+    (function() {
+      const canvas = document.getElementById('dog-cover');
+      const rect = canvas.parentElement.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      const ctx = canvas.getContext('2d');
+      ctx.scale(dpr, dpr);
+      const W = rect.width, H = rect.height;
+
+      // 天空渐变
+      const sky = ctx.createLinearGradient(0, 0, 0, H);
+      sky.addColorStop(0, '#87CEEB');
+      sky.addColorStop(1, '#B8E6B8');
+      ctx.fillStyle = sky;
+      ctx.fillRect(0, 0, W, H);
+
+      // 草地
+      ctx.fillStyle = '#6BBF59';
+      ctx.fillRect(0, H * 0.6, W, H * 0.4);
+      ctx.fillStyle = '#5DAF4B';
+      for (let i = 0; i < 60; i++) {
+        const x = Math.random() * W;
+        const y = H * 0.6 + Math.random() * H * 0.4;
+        ctx.fillRect(x, y, 3, 3);
+      }
+
+      // 云朵
+      function drawCloud(x, y, s) {
+        ctx.fillStyle = 'rgba(255,255,255,0.8)';
+        ctx.beginPath();
+        ctx.arc(x, y, 12*s, 0, Math.PI*2);
+        ctx.arc(x+14*s, y-4*s, 10*s, 0, Math.PI*2);
+        ctx.arc(x+26*s, y, 12*s, 0, Math.PI*2);
+        ctx.fill();
+      }
+      drawCloud(W*0.2, H*0.15, 1.2);
+      drawCloud(W*0.65, H*0.22, 1);
+      drawCloud(W*0.85, H*0.1, 0.8);
+
+      // 树
+      function drawTree(x, y) {
+        ctx.fillStyle = '#4A3728';
+        ctx.fillRect(x-3, y, 6, 16);
+        ctx.fillStyle = '#3D8B37';
+        ctx.beginPath();
+        ctx.arc(x, y-4, 14, 0, Math.PI*2);
+        ctx.fill();
+        ctx.fillStyle = '#4AA844';
+        ctx.beginPath();
+        ctx.arc(x+4, y-6, 10, 0, Math.PI*2);
+        ctx.fill();
+      }
+      drawTree(W*0.12, H*0.52);
+      drawTree(W*0.78, H*0.48);
+      drawTree(W*0.92, H*0.55);
+
+      // 小路
+      ctx.fillStyle = '#C4A96A';
+      ctx.beginPath();
+      ctx.moveTo(0, H*0.75);
+      ctx.quadraticCurveTo(W*0.3, H*0.68, W*0.5, H*0.72);
+      ctx.quadraticCurveTo(W*0.7, H*0.76, W, H*0.7);
+      ctx.lineTo(W, H*0.73);
+      ctx.quadraticCurveTo(W*0.7, H*0.79, W*0.5, H*0.75);
+      ctx.quadraticCurveTo(W*0.3, H*0.71, 0, H*0.78);
+      ctx.fill();
+
+      // 人物（像素小人）
+      const px = W * 0.42, py = H * 0.58;
+      // 头
+      ctx.fillStyle = '#FFDBB4';
+      ctx.fillRect(px, py, 6, 6);
+      // 身体
+      ctx.fillStyle = '#5B8CFF';
+      ctx.fillRect(px-1, py+6, 8, 8);
+      // 腿
+      ctx.fillStyle = '#444';
+      ctx.fillRect(px, py+14, 3, 6);
+      ctx.fillRect(px+4, py+14, 3, 6);
+
+      // 牵绳
+      ctx.strokeStyle = '#8B7355';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(px+7, py+8);
+      ctx.quadraticCurveTo(px+18, py+12, px+26, py+14);
+      ctx.stroke();
+
+      // 狗（柴犬色）
+      const dx = px + 24, dy = py + 10;
+      ctx.fillStyle = '#D4893F';
+      ctx.fillRect(dx, dy, 10, 7);
+      ctx.fillRect(dx-3, dy-2, 5, 5);
+      // 耳朵
+      ctx.fillRect(dx-3, dy-5, 2, 3);
+      ctx.fillRect(dx, dy-5, 2, 3);
+      // 尾巴
+      ctx.fillStyle = '#E8A84C';
+      ctx.fillRect(dx+10, dy-3, 2, 5);
+      // 腿
+      ctx.fillStyle = '#C07830';
+      ctx.fillRect(dx, dy+7, 2, 4);
+      ctx.fillRect(dx+4, dy+7, 2, 4);
+      ctx.fillRect(dx+7, dy+7, 2, 4);
+
+      // 动画：飘动的蝴蝶
+      let frame = 0;
+      function animateButterfly() {
+        // 只重绘蝴蝶区域
+        const bx = W*0.6 + Math.sin(frame*0.03)*20;
+        const by = H*0.4 + Math.cos(frame*0.04)*10;
+
+        ctx.fillStyle = '#FF69B4';
+        const wing = Math.sin(frame*0.15) * 4;
+        ctx.fillRect(bx-3-Math.abs(wing), by, Math.abs(wing)+2, 3);
+        ctx.fillRect(bx+2, by, Math.abs(wing)+2, 3);
+        ctx.fillStyle = '#333';
+        ctx.fillRect(bx, by, 2, 4);
+
+        frame++;
+        requestAnimationFrame(animateButterfly);
+      }
+      animateButterfly();
+    })();
+  </script>
+</body>
+</html>
