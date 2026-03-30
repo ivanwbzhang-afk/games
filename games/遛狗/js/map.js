@@ -15,12 +15,40 @@ const GameMap = {
   _grassDetails: [],
   _leaves: [],
 
+  // 预生成星星
+  _stars: [],
+  // 路灯
+  _lamps: [],
+
   init() {
     this._generateLandmarks();
     this._generateDigSpots();
     this._generateGrassDetails();
     this._generateLeaves();
+    this._generateStars();
+    this._generateLamps();
     return this;
+  },
+
+  _generateStars() {
+    for (let i = 0; i < 80; i++) {
+      this._stars.push({
+        x: Math.random() * this.WIDTH,
+        y: Math.random() * this.HEIGHT * 0.35,
+        size: 0.8 + Math.random() * 1.2,
+        phase: Math.random() * Math.PI * 2,
+        speed: 0.008 + Math.random() * 0.015,
+      });
+    }
+  },
+
+  _generateLamps() {
+    this._lamps = [
+      { x: 350, y: 520 }, { x: 750, y: 520 }, { x: 1100, y: 520 },
+      { x: 500, y: 800 }, { x: 900, y: 800 },
+      { x: 300, y: 1100 }, { x: 700, y: 1100 }, { x: 1100, y: 1050 },
+      { x: 200, y: 350 }, { x: 1300, y: 600 },
+    ];
   },
 
   _generateGrassDetails() {
@@ -203,40 +231,102 @@ const GameMap = {
     );
   },
 
-  // ===== 渲染 =====
+  // ===== 渲染（夜景） =====
   render(ctx, camera) {
     const { x: cx, y: cy, w: cw, h: ch } = camera;
+    const t = Date.now() / 1000;
 
-    // 1) 背景草地 - 多层渐变
-    const grd = ctx.createLinearGradient(0, 0, 0, ch);
-    grd.addColorStop(0, '#5f9340');
-    grd.addColorStop(0.5, '#5b8c3e');
-    grd.addColorStop(1, '#508535');
-    ctx.fillStyle = grd;
+    // 地平线位置（相对屏幕）
+    const horizonWorld = 420; // 世界坐标中的地平线
+    const horizonScreen = horizonWorld - cy;
+
+    // 1) 天空渐变
+    const skyGrd = ctx.createLinearGradient(0, 0, 0, Math.max(horizonScreen + 40, ch));
+    skyGrd.addColorStop(0, '#0c0c1a');
+    skyGrd.addColorStop(0.3, '#1a1430');
+    skyGrd.addColorStop(0.6, '#2a2040');
+    skyGrd.addColorStop(1, '#1a3028');
+    ctx.fillStyle = skyGrd;
     ctx.fillRect(0, 0, cw, ch);
 
-    // 2) 草地细节纹理
+    // 2) 星星（只在天空区域绘制）
+    for (const star of this._stars) {
+      const sx = star.x - cx, sy = star.y - cy;
+      if (sx < -5 || sx > cw + 5 || sy < -5 || sy > horizonScreen + 20) continue;
+      const twinkle = 0.15 + 0.6 * Math.abs(Math.sin(t * star.speed * 6 + star.phase));
+      ctx.fillStyle = `rgba(255,255,255,${twinkle})`;
+      ctx.fillRect(sx, sy, star.size, star.size);
+    }
+
+    // 3) 月亮（固定在视口右上角区域）
+    const moonX = cw * 0.8;
+    const moonY = 60 - cy * 0.02;
+    if (moonY > -50 && moonY < ch * 0.5) {
+      // 月亮光晕
+      ctx.fillStyle = 'rgba(255,252,230,0.05)';
+      ctx.beginPath();
+      ctx.arc(moonX, moonY, 50, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,252,230,0.1)';
+      ctx.beginPath();
+      ctx.arc(moonX, moonY, 30, 0, Math.PI * 2);
+      ctx.fill();
+      // 月亮本体
+      ctx.fillStyle = 'rgba(255,252,230,0.9)';
+      ctx.beginPath();
+      ctx.arc(moonX, moonY, 16, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // 4) 远山剪影
+    const hillY = horizonScreen - 30;
+    if (hillY < ch + 60) {
+      ctx.fillStyle = '#111a18';
+      ctx.beginPath();
+      ctx.moveTo(0, hillY + 40);
+      for (let x = 0; x <= cw; x += 2) {
+        const wx = x + cx;
+        const h = Math.sin(wx * 0.003) * 25 + Math.sin(wx * 0.007) * 15 + Math.cos(wx * 0.002) * 20;
+        ctx.lineTo(x, hillY - h);
+      }
+      ctx.lineTo(cw, hillY + 80);
+      ctx.lineTo(0, hillY + 80);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    // 5) 草地
+    const grassTop = horizonScreen + 10;
+    if (grassTop < ch) {
+      const grassGrd = ctx.createLinearGradient(0, Math.max(0, grassTop), 0, ch);
+      grassGrd.addColorStop(0, '#1c3c26');
+      grassGrd.addColorStop(0.3, '#1e4a2a');
+      grassGrd.addColorStop(1, '#0e2418');
+      ctx.fillStyle = grassGrd;
+      ctx.fillRect(0, Math.max(0, grassTop), cw, ch - Math.max(0, grassTop));
+    }
+
+    // 6) 草地细节纹理（暗色调）
     for (const g of this._grassDetails) {
       if (g.x < cx - 10 || g.x > cx + cw + 10 || g.y < cy - 10 || g.y > cy + ch + 10) continue;
       const sx = g.x - cx, sy = g.y - cy;
       switch (g.type) {
         case 'dark':
-          ctx.fillStyle = 'rgba(60,100,40,0.4)';
+          ctx.fillStyle = 'rgba(30,60,30,0.4)';
           ctx.fillRect(sx, sy, g.size, g.size);
           break;
         case 'light':
-          ctx.fillStyle = 'rgba(120,180,80,0.3)';
+          ctx.fillStyle = 'rgba(40,90,40,0.25)';
           ctx.fillRect(sx, sy, g.size, g.size * 0.6);
           break;
         case 'tuft':
-          // 小草丛
-          ctx.fillStyle = '#4a8a30';
+          ctx.fillStyle = '#1a4a20';
           ctx.fillRect(sx, sy, 1, -4);
           ctx.fillRect(sx + 2, sy, 1, -5);
           ctx.fillRect(sx - 1, sy, 1, -3);
           break;
         case 'dot':
-          ctx.fillStyle = 'rgba(80,140,50,0.35)';
+          ctx.fillStyle = 'rgba(40,80,35,0.3)';
           ctx.beginPath();
           ctx.arc(sx, sy, g.size * 0.4, 0, Math.PI * 2);
           ctx.fill();
@@ -244,32 +334,44 @@ const GameMap = {
       }
     }
 
-    // 3) 落叶
+    // 7) 落叶（暗色调）
     for (const l of this._leaves) {
       if (l.x < cx - 5 || l.x > cx + cw + 5 || l.y < cy - 5 || l.y > cy + ch + 5) continue;
+      ctx.globalAlpha = 0.4;
       ctx.fillStyle = l.color;
       ctx.save();
       ctx.translate(l.x - cx, l.y - cy);
       ctx.rotate(l.rot);
       ctx.fillRect(-l.size / 2, -l.size / 4, l.size, l.size / 2);
       ctx.restore();
+      ctx.globalAlpha = 1;
     }
 
-    // 4) 小径（更宽更美）
+    // 8) 小径（暗色调）
     this._renderPaths(ctx, camera);
 
-    // 5) 湖泊
+    // 9) 湖泊
     this._renderLake(ctx, camera);
 
-    // 6) 地标（按y排序）
+    // 10) 路灯（下层光晕 - 在地标之前渲染地面光）
+    for (const lamp of this._lamps) {
+      if (lamp.x < cx - 80 || lamp.x > cx + cw + 80 || lamp.y < cy - 80 || lamp.y > cy + ch + 80) continue;
+      const lx = lamp.x - cx, ly = lamp.y - cy;
+      // 地面光晕
+      ctx.fillStyle = 'rgba(255,220,100,0.04)';
+      ctx.beginPath();
+      ctx.ellipse(lx, ly + 14, 40, 20, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // 11) 地标（按y排序）
     const sorted = [...this.landmarks].sort((a, b) => a.y - b.y);
     for (const lm of sorted) {
       if (lm.x < cx - 60 || lm.x > cx + cw + 60 || lm.y < cy - 60 || lm.y > cy + ch + 60) continue;
       const sprite = SCENE_SPRITES[lm.type];
       if (sprite) {
-        // 树有阴影
         if (lm.type === 'tree' || lm.type === 'crookedTree') {
-          ctx.fillStyle = 'rgba(0,0,0,0.08)';
+          ctx.fillStyle = 'rgba(0,0,0,0.15)';
           ctx.beginPath();
           ctx.ellipse(lm.x - cx + 15, lm.y - cy + 30, 18, 6, 0, 0, Math.PI * 2);
           ctx.fill();
@@ -278,7 +380,46 @@ const GameMap = {
       }
     }
 
-    // 7) 气味标记
+    // 12) 路灯（灯杆 + 灯头 + 上层光晕）
+    for (const lamp of this._lamps) {
+      if (lamp.x < cx - 50 || lamp.x > cx + cw + 50 || lamp.y < cy - 60 || lamp.y > cy + ch + 30) continue;
+      const lx = lamp.x - cx, ly = lamp.y - cy;
+      // 灯杆
+      ctx.fillStyle = '#4a4a4a';
+      ctx.fillRect(lx - 1, ly - 28, 2, 42);
+      // 灯头
+      ctx.fillStyle = 'rgba(255,220,120,0.9)';
+      ctx.beginPath();
+      ctx.arc(lx, ly - 28, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+      // 灯光光晕
+      const glow = ctx.createRadialGradient(lx, ly - 20, 2, lx, ly - 10, 35);
+      glow.addColorStop(0, 'rgba(255,220,100,0.12)');
+      glow.addColorStop(0.5, 'rgba(255,220,100,0.04)');
+      glow.addColorStop(1, 'rgba(255,220,100,0)');
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(lx, ly - 10, 35, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // 13) 萤火虫
+    for (let i = 0; i < 15; i++) {
+      const fx = ((i * 137.5 + 50) % this.WIDTH);
+      const fy = 450 + ((i * 89.3 + 30) % (this.HEIGHT - 500));
+      if (fx < cx - 20 || fx > cx + cw + 20 || fy < cy - 20 || fy > cy + ch + 20) continue;
+      const flicker = 0.15 + 0.55 * Math.abs(Math.sin(t * 1.5 + i * 2.1));
+      ctx.fillStyle = `rgba(180,230,100,${flicker})`;
+      ctx.beginPath();
+      ctx.arc(
+        fx - cx + Math.sin(t * 0.8 + i) * 8,
+        fy - cy + Math.cos(t + i) * 5,
+        1.5, 0, Math.PI * 2
+      );
+      ctx.fill();
+    }
+
+    // 14) 气味标记
     for (const mark of this.scentMarks) {
       if (mark.x < cx - 10 || mark.x > cx + cw + 10 || mark.y < cy - 10 || mark.y > cy + ch + 10) continue;
       ctx.globalAlpha = mark.alpha || 0.3;
@@ -293,27 +434,23 @@ const GameMap = {
   _renderPaths(ctx, camera) {
     const { x: cx, y: cy, w: cw, h: ch } = camera;
 
-    // 蜿蜒横路 - 更宽的泥土路
+    // 蜿蜒横路 - 暗色泥土路
     for (let x = Math.max(30, cx - 20); x < Math.min(this.WIDTH - 30, cx + cw + 20); x += 1) {
       const py = 560 + Math.sin(x / 200) * 50;
       const screenX = x - cx;
       if (screenX < -2 || screenX > cw + 2) continue;
-
-      // 路面
-      ctx.fillStyle = '#c4b08a';
+      ctx.fillStyle = 'rgba(80,65,40,0.5)';
       ctx.fillRect(screenX, py - cy - 14, 2, 30);
-      // 路面纹理
       if ((x & 7) === 0) {
-        ctx.fillStyle = '#b8a47e';
+        ctx.fillStyle = 'rgba(70,55,30,0.4)';
         ctx.fillRect(screenX, py - cy - 8, 3, 2);
       }
     }
-    // 横路边缘
     for (let x = Math.max(30, cx - 20); x < Math.min(this.WIDTH - 30, cx + cw + 20); x += 2) {
       const py = 560 + Math.sin(x / 200) * 50;
       const screenX = x - cx;
       if (screenX < -2 || screenX > cw + 2) continue;
-      ctx.fillStyle = '#a89870';
+      ctx.fillStyle = 'rgba(60,50,30,0.4)';
       ctx.fillRect(screenX, py - cy - 15, 2, 2);
       ctx.fillRect(screenX, py - cy + 15, 2, 2);
     }
@@ -323,10 +460,10 @@ const GameMap = {
       const px = 700 + Math.sin(y / 180) * 40;
       const screenY = y - cy;
       if (screenY < -2 || screenY > ch + 2) continue;
-      ctx.fillStyle = '#c4b08a';
+      ctx.fillStyle = 'rgba(80,65,40,0.5)';
       ctx.fillRect(px - cx - 14, screenY, 30, 2);
       if ((y & 7) === 0) {
-        ctx.fillStyle = '#b8a47e';
+        ctx.fillStyle = 'rgba(70,55,30,0.4)';
         ctx.fillRect(px - cx - 5, screenY, 2, 3);
       }
     }
@@ -334,7 +471,7 @@ const GameMap = {
       const px = 700 + Math.sin(y / 180) * 40;
       const screenY = y - cy;
       if (screenY < -2 || screenY > ch + 2) continue;
-      ctx.fillStyle = '#a89870';
+      ctx.fillStyle = 'rgba(60,50,30,0.4)';
       ctx.fillRect(px - cx - 15, screenY, 2, 2);
       ctx.fillRect(px - cx + 15, screenY, 2, 2);
     }
@@ -344,33 +481,33 @@ const GameMap = {
     const { x: cx, y: cy } = camera;
     const lx = 200, ly = 800, rx = 140, ry = 100;
 
-    // 湖岸泥土
-    ctx.fillStyle = '#8a7a5a';
+    // 湖岸泥土（暗色）
+    ctx.fillStyle = '#3a3020';
     ctx.beginPath();
     ctx.ellipse(lx - cx, ly - cy, rx + 8, ry + 8, 0, 0, Math.PI * 2);
     ctx.fill();
 
     // 浅水区
-    ctx.fillStyle = '#5aa0c0';
+    ctx.fillStyle = '#1a4a5a';
     ctx.beginPath();
     ctx.ellipse(lx - cx, ly - cy, rx + 3, ry + 3, 0, 0, Math.PI * 2);
     ctx.fill();
 
     // 深水
-    ctx.fillStyle = PAL.WATER;
+    ctx.fillStyle = '#153a50';
     ctx.beginPath();
     ctx.ellipse(lx - cx, ly - cy, rx - 5, ry - 5, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // 高光
-    ctx.fillStyle = 'rgba(150,210,240,0.4)';
+    // 月光反射
+    ctx.fillStyle = 'rgba(200,220,240,0.12)';
     ctx.beginPath();
-    ctx.ellipse(lx - cx - 25, ly - cy - 20, rx * 0.35, ry * 0.25, -0.3, 0, Math.PI * 2);
+    ctx.ellipse(lx - cx - 20, ly - cy - 15, rx * 0.3, ry * 0.15, -0.3, 0, Math.PI * 2);
     ctx.fill();
 
-    // 动态波纹
+    // 动态波纹（暗色）
     const t = Date.now() / 1000;
-    ctx.strokeStyle = 'rgba(150,210,240,0.25)';
+    ctx.strokeStyle = 'rgba(100,160,200,0.12)';
     ctx.lineWidth = 1;
     for (let i = 0; i < 4; i++) {
       const wr = 20 + i * 25 + Math.sin(t * 0.5 + i) * 5;
