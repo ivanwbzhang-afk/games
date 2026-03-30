@@ -1,5 +1,5 @@
 /**
- * map.js - 公园地图系统（完全重写 - 丰富美观版）
+ * map.js - 公园地图系统（俯视 + 真实时间光线）
  */
 
 const GameMap = {
@@ -11,16 +11,88 @@ const GameMap = {
   npcSpawns: [],
   scentMarks: [],
 
-  // 预生成的草地细节（性能优化）
   _grassDetails: [],
   _leaves: [],
+  _lamps: [],
+
+  // 时间光线系统
+  _timeOfDay: 'day', // dawn, day, dusk, night
+
+  getTimeOfDay() {
+    const h = new Date().getHours();
+    if (h >= 5 && h < 7) return 'dawn';
+    if (h >= 7 && h < 17) return 'day';
+    if (h >= 17 && h < 19) return 'dusk';
+    return 'night';
+  },
+
+  // 根据时间返回环境配色
+  getTimePalette() {
+    const tod = this.getTimeOfDay();
+    switch (tod) {
+      case 'dawn': return {
+        grass1: '#4a7a3a', grass2: '#3d662f', grass3: '#2d5220',
+        detail_dark: 'rgba(40,70,40,0.4)', detail_light: 'rgba(70,120,60,0.25)',
+        tuft: '#3a6125', dot: 'rgba(50,90,45,0.3)',
+        path: '#b5854a', pathEdge: '#8f6130', pathBorder: '#613b16',
+        lakeShore: '#3a2e1d', lakeShallow: '#366e7a', lakeDeep: '#26535e',
+        lakeHighlight: 'rgba(180,200,220,0.15)',
+        lampGlow: 'rgba(255,220,100,0.05)', lampDot: 'rgba(255,220,120,0.4)',
+        overlay: 'rgba(200,120,80,0.15)', // 晨光
+        firefly: 0.2,
+      };
+      case 'day': return {
+        grass1: '#5fac33', grass2: '#52962a', grass3: '#458220',
+        detail_dark: 'rgba(50,90,40,0.35)', detail_light: 'rgba(90,150,70,0.25)',
+        tuft: '#4a8a1c', dot: 'rgba(60,110,50,0.3)',
+        path: '#d4a464', pathEdge: '#ad7637', pathBorder: '#804c1e',
+        lakeShore: '#453625', lakeShallow: '#418b99', lakeDeep: '#2d6a7d',
+        lakeHighlight: 'rgba(150,210,240,0.3)',
+        lampGlow: 'rgba(255,220,100,0)', lampDot: 'rgba(200,200,200,0.3)',
+        overlay: null,
+        firefly: 0,
+      };
+      case 'dusk': return {
+        grass1: '#3d7020', grass2: '#345e1a', grass3: '#284a12',
+        detail_dark: 'rgba(35,65,30,0.4)', detail_light: 'rgba(55,100,50,0.25)',
+        tuft: '#386318', dot: 'rgba(45,85,38,0.3)',
+        path: '#c49060', pathEdge: '#a06e3e', pathBorder: '#704a22',
+        lakeShore: '#382a1c', lakeShallow: '#326c7a', lakeDeep: '#21505e',
+        lakeHighlight: 'rgba(220,180,140,0.18)',
+        lampGlow: 'rgba(255,180,60,0.2)', lampDot: 'rgba(255,200,100,0.8)',
+        overlay: 'rgba(200,80,30,0.15)',
+        firefly: 0.5,
+      };
+      default: return { // night
+        grass1: '#1e3e24', grass2: '#17301b', grass3: '#112510',
+        detail_dark: 'rgba(30,60,30,0.4)', detail_light: 'rgba(40,90,40,0.25)',
+        tuft: '#18381c', dot: 'rgba(40,80,35,0.3)',
+        path: '#7a6850', pathEdge: '#5c4a35', pathBorder: '#3d3025',
+        lakeShore: '#2e2418', lakeShallow: '#1e4a5a', lakeDeep: '#153542',
+        lakeHighlight: 'rgba(160,200,220,0.12)',
+        lampGlow: 'rgba(255,200,80,0.25)', lampDot: 'rgba(255,220,120,0.9)',
+        overlay: 'rgba(8,12,35,0.4)',
+        firefly: 0.8,
+      };
+    }
+  },
 
   init() {
     this._generateLandmarks();
     this._generateDigSpots();
     this._generateGrassDetails();
     this._generateLeaves();
+    this._generateLamps();
     return this;
+  },
+
+  _generateLamps() {
+    this._lamps = [
+      { x: 350, y: 520 }, { x: 750, y: 520 }, { x: 1100, y: 520 },
+      { x: 500, y: 800 }, { x: 900, y: 800 },
+      { x: 300, y: 1100 }, { x: 700, y: 1100 }, { x: 1100, y: 1050 },
+      { x: 200, y: 350 }, { x: 1300, y: 600 },
+    ];
   },
 
   _generateGrassDetails() {
@@ -58,30 +130,45 @@ const GameMap = {
 
   _generateLandmarks() {
     this.landmarks = [
-      // ---- 树木（多种分布，更密集）----
-      { type: 'tree', x: 100, y: 80 }, { type: 'tree', x: 250, y: 60 },
-      { type: 'tree', x: 450, y: 100 }, { type: 'tree', x: 700, y: 70 },
-      { type: 'tree', x: 950, y: 130 }, { type: 'tree', x: 1200, y: 90 },
-      { type: 'tree', x: 1400, y: 160 },
-      // 左侧树林带
-      { type: 'tree', x: 80, y: 300 }, { type: 'tree', x: 130, y: 350 },
-      { type: 'tree', x: 60, y: 400 }, { type: 'tree', x: 140, y: 450 },
-      // 中间散落
-      { type: 'tree', x: 500, y: 350 }, { type: 'tree', x: 850, y: 280 },
-      { type: 'tree', x: 1100, y: 400 }, { type: 'tree', x: 1350, y: 350 },
-      // 下半区
-      { type: 'tree', x: 300, y: 800 }, { type: 'tree', x: 600, y: 900 },
-      { type: 'tree', x: 900, y: 750 }, { type: 'tree', x: 1050, y: 850 },
-      { type: 'tree', x: 1300, y: 900 },
-      // 底部
-      { type: 'tree', x: 150, y: 1200 }, { type: 'tree', x: 500, y: 1300 },
-      { type: 'tree', x: 800, y: 1150 }, { type: 'tree', x: 1100, y: 1250 },
+      // ---- 大树（bigTree）散布全图 ----
+      { type: 'bigTree', x: 100, y: 80 }, { type: 'bigTree', x: 450, y: 100 },
+      { type: 'bigTree', x: 850, y: 130 }, { type: 'bigTree', x: 1200, y: 90 },
+      { type: 'bigTree', x: 80, y: 400 }, { type: 'bigTree', x: 500, y: 350 },
+      { type: 'bigTree', x: 1100, y: 400 }, { type: 'bigTree', x: 300, y: 800 },
+      { type: 'bigTree', x: 900, y: 750 }, { type: 'bigTree', x: 1300, y: 900 },
+      { type: 'bigTree', x: 500, y: 1300 }, { type: 'bigTree', x: 1100, y: 1250 },
+
+      // ---- 普通树 ----
+      { type: 'tree', x: 250, y: 60 }, { type: 'tree', x: 700, y: 70 },
+      { type: 'tree', x: 950, y: 130 }, { type: 'tree', x: 1400, y: 160 },
+      { type: 'tree', x: 130, y: 350 }, { type: 'tree', x: 140, y: 450 },
+      { type: 'tree', x: 850, y: 280 }, { type: 'tree', x: 1350, y: 350 },
+      { type: 'tree', x: 600, y: 900 }, { type: 'tree', x: 1050, y: 850 },
+      { type: 'tree', x: 150, y: 1200 }, { type: 'tree', x: 800, y: 1150 },
       { type: 'tree', x: 1400, y: 1100 },
+
+      // ---- 圆形树（roundTree）----
+      { type: 'roundTree', x: 350, y: 150 }, { type: 'roundTree', x: 650, y: 250 },
+      { type: 'roundTree', x: 1000, y: 300 }, { type: 'roundTree', x: 200, y: 600 },
+      { type: 'roundTree', x: 750, y: 650 }, { type: 'roundTree', x: 1200, y: 550 },
+      { type: 'roundTree', x: 400, y: 1050 }, { type: 'roundTree', x: 950, y: 1100 },
+      { type: 'roundTree', x: 1350, y: 1200 },
+
+      // ---- 灌木丛（bush）----
+      { type: 'bush', x: 180, y: 180 }, { type: 'bush', x: 400, y: 250 },
+      { type: 'bush', x: 600, y: 150 }, { type: 'bush', x: 800, y: 400 },
+      { type: 'bush', x: 1050, y: 200 }, { type: 'bush', x: 1250, y: 450 },
+      { type: 'bush', x: 350, y: 650 }, { type: 'bush', x: 700, y: 500 },
+      { type: 'bush', x: 550, y: 750 }, { type: 'bush', x: 1000, y: 650 },
+      { type: 'bush', x: 250, y: 950 }, { type: 'bush', x: 650, y: 1050 },
+      { type: 'bush', x: 850, y: 950 }, { type: 'bush', x: 1150, y: 800 },
+      { type: 'bush', x: 1400, y: 700 }, { type: 'bush', x: 450, y: 1250 },
+      { type: 'bush', x: 1000, y: 1350 }, { type: 'bush', x: 1300, y: 1050 },
 
       // 歪脖子老树
       { type: 'crookedTree', x: 750, y: 500, special: true },
 
-      // ---- 长椅（更多）----
+      // ---- 长椅 ----
       { type: 'bench', x: 400, y: 300 }, { type: 'bench', x: 800, y: 600 },
       { type: 'bench', x: 300, y: 900 }, { type: 'bench', x: 1100, y: 500 },
       { type: 'bench', x: 600, y: 1200 },
@@ -91,13 +178,13 @@ const GameMap = {
       { type: 'stump', x: 950, y: 400 }, { type: 'stump', x: 450, y: 1000 },
       { type: 'stump', x: 1200, y: 700 },
 
-      // ---- 芦苇丛（湖周围更多）----
+      // ---- 芦苇丛 ----
       { type: 'reed', x: 180, y: 750 }, { type: 'reed', x: 210, y: 780 },
       { type: 'reed', x: 160, y: 810 }, { type: 'reed', x: 230, y: 830 },
       { type: 'reed', x: 140, y: 850 }, { type: 'reed', x: 200, y: 870 },
       { type: 'reed', x: 260, y: 760 }, { type: 'reed', x: 120, y: 790 },
 
-      // ---- 花丛（更多更分散）----
+      // ---- 花丛 ----
       { type: 'flower', x: 350, y: 450 }, { type: 'flowerBlue', x: 365, y: 465 },
       { type: 'flowerPink', x: 345, y: 440 },
       { type: 'flower', x: 700, y: 800 }, { type: 'flowerBlue', x: 720, y: 790 },
@@ -176,8 +263,12 @@ const GameMap = {
     if (x < 10 || x > this.WIDTH - 10 || y < 10 || y > this.HEIGHT - 10) return false;
     if (this.isWater(x, y)) return false;
     for (const lm of this.landmarks) {
-      if (lm.type === 'tree' || lm.type === 'crookedTree') {
-        if (Math.abs(x - lm.x - 12) < 10 && Math.abs(y - lm.y + 2) < 10) return false;
+      if (lm.type === 'bigTree') {
+        if (x > lm.x + 10 && x < lm.x + 50 && y > lm.y + 30 && y < lm.y + 55) return false;
+      } else if (lm.type === 'tree' || lm.type === 'crookedTree' || lm.type === 'roundTree') {
+        if (x > lm.x + 5 && x < lm.x + 35 && y > lm.y + 20 && y < lm.y + 45) return false;
+      } else if (lm.type === 'bush') {
+        if (x > lm.x && x < lm.x + 30 && y > lm.y + 10 && y < lm.y + 25) return false;
       }
     }
     return true;
@@ -203,180 +294,203 @@ const GameMap = {
     );
   },
 
-  // ===== 渲染 =====
+  // ===== 渲染（俯视 + 时间同步） =====
   render(ctx, camera) {
     const { x: cx, y: cy, w: cw, h: ch } = camera;
+    const t = Date.now() / 1000;
+    const pal = this.getTimePalette();
+    const TILE = 32; // 星露谷风格网格尺寸
 
-    // 1) 背景草地 - 多层渐变
-    const grd = ctx.createLinearGradient(0, 0, 0, ch);
-    grd.addColorStop(0, '#5f9340');
-    grd.addColorStop(0.5, '#5b8c3e');
-    grd.addColorStop(1, '#508535');
-    ctx.fillStyle = grd;
+    // 1) 基础草地底色
+    ctx.fillStyle = pal.grass2;
     ctx.fillRect(0, 0, cw, ch);
 
-    // 2) 草地细节纹理
+    // 2) 网格化渲染水、路、草地纹理
+    const startX = Math.floor(cx / TILE) * TILE;
+    const startY = Math.floor(cy / TILE) * TILE;
+
+    for (let x = startX - TILE; x < cx + cw + TILE; x += TILE) {
+      for (let y = startY - TILE; y < cy + ch + TILE; y += TILE) {
+        const sx = x - cx;
+        const sy = y - cy;
+        const cxGrid = x + TILE / 2;
+        const cyGrid = y + TILE / 2;
+
+        const isW = this.isWater(cxGrid, cyGrid);
+        const isP = this.isPath(cxGrid, cyGrid);
+
+        const hX = Math.floor(x);
+        const hY = Math.floor(y);
+        const hash = Math.sin(hX * 12.9898 + hY * 78.233) * 43758.5453;
+        const rand = hash - Math.floor(hash);
+
+        if (isW) {
+          // 伪 Auto-Tiling 计算水岸边
+          const wT = this.isWater(cxGrid, cyGrid - TILE);
+          const wB = this.isWater(cxGrid, cyGrid + TILE);
+          const wL = this.isWater(cxGrid - TILE, cyGrid);
+          const wR = this.isWater(cxGrid + TILE, cyGrid);
+
+          const isDeepW = wT && wB && wL && wR;
+
+          // 基础浅水
+          ctx.fillStyle = pal.lakeShallow;
+          ctx.fillRect(sx, sy, TILE, TILE);
+
+          // 深水及波纹
+          if (isDeepW) {
+            ctx.fillStyle = pal.lakeDeep;
+            ctx.fillRect(sx + 4, sy + 4, TILE - 8, TILE - 8);
+            if (Math.sin(x * 12.3 + y * 7.1 + t * 2) > 0.8) {
+              ctx.fillStyle = pal.lakeHighlight;
+              ctx.fillRect(sx + 8, sy + 12, TILE - 16, 4);
+            }
+          }
+
+          // 绘制泥土色的岸边
+          ctx.fillStyle = pal.lakeShore;
+          if (!wT) ctx.fillRect(sx, sy, TILE, 6);
+          if (!wB) ctx.fillRect(sx, sy + TILE - 6, TILE, 6);
+          if (!wL) ctx.fillRect(sx, sy, 6, TILE);
+          if (!wR) ctx.fillRect(sx + TILE - 6, sy, 6, TILE);
+
+          // 岸边过渡点缀（角落泥土）
+          if (!wT && !wL) ctx.fillRect(sx, sy, 8, 8);
+          if (!wT && !wR) ctx.fillRect(sx + TILE - 8, sy, 8, 8);
+          if (!wB && !wL) ctx.fillRect(sx, sy + TILE - 8, 8, 8);
+          if (!wB && !wR) ctx.fillRect(sx + TILE - 8, sy + TILE - 8, 8, 8);
+        } else if (isP) {
+          // 土路
+          ctx.fillStyle = pal.pathBorder;
+          ctx.fillRect(sx, sy, TILE, TILE);
+
+          // 内部稍微亮一点
+          ctx.fillStyle = pal.pathEdge;
+          ctx.fillRect(sx + 2, sy + 2, TILE - 4, TILE - 4);
+
+          ctx.fillStyle = pal.path;
+          ctx.fillRect(sx + 4, sy + 4, TILE - 8, TILE - 8);
+
+          // 路面随机斑点
+          if (rand < 0.2) {
+            ctx.fillStyle = pal.pathEdge;
+            ctx.fillRect(sx + 8, sy + 8, 8, 8);
+          }
+        } else {
+          // 草地网格交错颜色
+          if ((Math.floor(x / TILE) + Math.floor(y / TILE)) % 2 === 0) {
+            ctx.fillStyle = pal.grass1;
+            ctx.fillRect(sx, sy, TILE, TILE);
+          }
+          // 星露谷风格小草簇 (V型或U型)
+          if (rand < 0.1) {
+            ctx.fillStyle = pal.tuft;
+            ctx.fillRect(sx + 8, sy + 12, 4, 8);
+            ctx.fillRect(sx + 12, sy + 8, 4, 12);
+            ctx.fillRect(sx + 16, sy + 12, 4, 8);
+          } else if (rand > 0.9) {
+            ctx.fillStyle = pal.detail_dark;
+            ctx.fillRect(sx + 4, sy + 4, 8, 4);
+            ctx.fillRect(sx + 12, sy + 8, 4, 4);
+          }
+        }
+      }
+    }
+
+    // 3) 草地细节
     for (const g of this._grassDetails) {
       if (g.x < cx - 10 || g.x > cx + cw + 10 || g.y < cy - 10 || g.y > cy + ch + 10) continue;
       const sx = g.x - cx, sy = g.y - cy;
       switch (g.type) {
-        case 'dark':
-          ctx.fillStyle = 'rgba(60,100,40,0.4)';
-          ctx.fillRect(sx, sy, g.size, g.size);
-          break;
-        case 'light':
-          ctx.fillStyle = 'rgba(120,180,80,0.3)';
-          ctx.fillRect(sx, sy, g.size, g.size * 0.6);
-          break;
-        case 'tuft':
-          // 小草丛
-          ctx.fillStyle = '#4a8a30';
-          ctx.fillRect(sx, sy, 1, -4);
-          ctx.fillRect(sx + 2, sy, 1, -5);
-          ctx.fillRect(sx - 1, sy, 1, -3);
-          break;
-        case 'dot':
-          ctx.fillStyle = 'rgba(80,140,50,0.35)';
-          ctx.beginPath();
-          ctx.arc(sx, sy, g.size * 0.4, 0, Math.PI * 2);
-          ctx.fill();
-          break;
+        case 'dark': ctx.fillStyle = pal.detail_dark; ctx.fillRect(sx, sy, g.size, g.size); break;
+        case 'light': ctx.fillStyle = pal.detail_light; ctx.fillRect(sx, sy, g.size, g.size * 0.6); break;
+        case 'tuft': ctx.fillStyle = pal.tuft; ctx.fillRect(sx, sy, 1, -4); ctx.fillRect(sx+2, sy, 1, -5); ctx.fillRect(sx-1, sy, 1, -3); break;
+        case 'dot': ctx.fillStyle = pal.dot; ctx.fillRect(sx, sy, g.size, g.size); break;
       }
     }
 
-    // 3) 落叶
+    // 4) 落叶
     for (const l of this._leaves) {
       if (l.x < cx - 5 || l.x > cx + cw + 5 || l.y < cy - 5 || l.y > cy + ch + 5) continue;
+      ctx.globalAlpha = 0.4;
       ctx.fillStyle = l.color;
-      ctx.save();
-      ctx.translate(l.x - cx, l.y - cy);
-      ctx.rotate(l.rot);
-      ctx.fillRect(-l.size / 2, -l.size / 4, l.size, l.size / 2);
-      ctx.restore();
+      ctx.save(); ctx.translate(l.x - cx, l.y - cy); ctx.rotate(l.rot);
+      ctx.fillRect(-l.size/2, -l.size/4, l.size, l.size/2);
+      ctx.restore(); ctx.globalAlpha = 1;
     }
 
-    // 4) 小径（更宽更美）
-    this._renderPaths(ctx, camera);
-
-    // 5) 湖泊
-    this._renderLake(ctx, camera);
+    // 5) 路灯光晕
+    for (const lamp of this._lamps) {
+      if (lamp.x < cx - 80 || lamp.x > cx + cw + 80 || lamp.y < cy - 80 || lamp.y > cy + ch + 80) continue;
+      const lx = lamp.x - cx, ly = lamp.y - cy;
+      if (pal.lampGlow !== 'rgba(255,220,100,0)') {
+        const glow = ctx.createRadialGradient(lx, ly, 2, lx, ly, 60);
+        glow.addColorStop(0, pal.lampGlow);
+        glow.addColorStop(1, 'rgba(255,220,100,0)');
+        ctx.fillStyle = glow;
+        ctx.beginPath(); ctx.arc(lx, ly, 60, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.fillStyle = pal.lampDot;
+      ctx.beginPath(); ctx.arc(lx, ly, 4, 0, Math.PI * 2); ctx.fill();
+    }
 
     // 6) 地标（按y排序）
     const sorted = [...this.landmarks].sort((a, b) => a.y - b.y);
     for (const lm of sorted) {
-      if (lm.x < cx - 60 || lm.x > cx + cw + 60 || lm.y < cy - 60 || lm.y > cy + ch + 60) continue;
-      const sprite = SCENE_SPRITES[lm.type];
-      if (sprite) {
-        // 树有阴影
-        if (lm.type === 'tree' || lm.type === 'crookedTree') {
-          ctx.fillStyle = 'rgba(0,0,0,0.08)';
-          ctx.beginPath();
-          ctx.ellipse(lm.x - cx + 15, lm.y - cy + 30, 18, 6, 0, 0, Math.PI * 2);
-          ctx.fill();
-        }
-        PixelArt.draw(ctx, sprite, lm.x - cx, lm.y - cy, 3);
+      if (lm.x < cx - 80 || lm.x > cx + cw + 80 || lm.y < cy - 80 || lm.y > cy + ch + 80) continue;
+      this._renderLandmark(ctx, lm, cx, cy);
+    }
+
+    // 7) 萤火虫（夜晚/黄昏可见）
+    if (pal.firefly > 0) {
+      for (let i = 0; i < 20; i++) {
+        const fx = ((i * 137.5 + 50 + t * 5) % this.WIDTH);
+        const fy = ((i * 89.3 + 30 + Math.sin(t + i) * 10) % this.HEIGHT);
+        if (fx < cx - 20 || fx > cx + cw + 20 || fy < cy - 20 || fy > cy + ch + 20) continue;
+        const flicker = 0.2 + pal.firefly * Math.abs(Math.sin(t * 3 + i * 2.1));
+        ctx.fillStyle = `rgba(180,230,100,${flicker})`;
+        ctx.fillRect(fx - cx, fy - cy, 3, 3);
       }
     }
 
-    // 7) 气味标记
+    // 8) 时间覆盖层
+    if (pal.overlay) {
+      ctx.fillStyle = pal.overlay;
+      ctx.fillRect(0, 0, cw, ch);
+    }
+
+    // 9) 气味标记
     for (const mark of this.scentMarks) {
       if (mark.x < cx - 10 || mark.x > cx + cw + 10 || mark.y < cy - 10 || mark.y > cy + ch + 10) continue;
       ctx.globalAlpha = mark.alpha || 0.3;
       ctx.fillStyle = '#f1c40f';
-      ctx.beginPath();
-      ctx.arc(mark.x - cx, mark.y - cy, 2, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.fillRect(mark.x - cx - 2, mark.y - cy - 2, 4, 4);
       ctx.globalAlpha = 1;
     }
   },
 
-  _renderPaths(ctx, camera) {
-    const { x: cx, y: cy, w: cw, h: ch } = camera;
-
-    // 蜿蜒横路 - 更宽的泥土路
-    for (let x = Math.max(30, cx - 20); x < Math.min(this.WIDTH - 30, cx + cw + 20); x += 1) {
-      const py = 560 + Math.sin(x / 200) * 50;
-      const screenX = x - cx;
-      if (screenX < -2 || screenX > cw + 2) continue;
-
-      // 路面
-      ctx.fillStyle = '#c4b08a';
-      ctx.fillRect(screenX, py - cy - 14, 2, 30);
-      // 路面纹理
-      if ((x & 7) === 0) {
-        ctx.fillStyle = '#b8a47e';
-        ctx.fillRect(screenX, py - cy - 8, 3, 2);
-      }
-    }
-    // 横路边缘
-    for (let x = Math.max(30, cx - 20); x < Math.min(this.WIDTH - 30, cx + cw + 20); x += 2) {
-      const py = 560 + Math.sin(x / 200) * 50;
-      const screenX = x - cx;
-      if (screenX < -2 || screenX > cw + 2) continue;
-      ctx.fillStyle = '#a89870';
-      ctx.fillRect(screenX, py - cy - 15, 2, 2);
-      ctx.fillRect(screenX, py - cy + 15, 2, 2);
-    }
-
-    // 蜿蜒竖路
-    for (let y = Math.max(30, cy - 20); y < Math.min(this.HEIGHT - 30, cy + ch + 20); y += 1) {
-      const px = 700 + Math.sin(y / 180) * 40;
-      const screenY = y - cy;
-      if (screenY < -2 || screenY > ch + 2) continue;
-      ctx.fillStyle = '#c4b08a';
-      ctx.fillRect(px - cx - 14, screenY, 30, 2);
-      if ((y & 7) === 0) {
-        ctx.fillStyle = '#b8a47e';
-        ctx.fillRect(px - cx - 5, screenY, 2, 3);
-      }
-    }
-    for (let y = Math.max(30, cy - 20); y < Math.min(this.HEIGHT - 30, cy + ch + 20); y += 2) {
-      const px = 700 + Math.sin(y / 180) * 40;
-      const screenY = y - cy;
-      if (screenY < -2 || screenY > ch + 2) continue;
-      ctx.fillStyle = '#a89870';
-      ctx.fillRect(px - cx - 15, screenY, 2, 2);
-      ctx.fillRect(px - cx + 15, screenY, 2, 2);
-    }
-  },
-
-  _renderLake(ctx, camera) {
-    const { x: cx, y: cy } = camera;
-    const lx = 200, ly = 800, rx = 140, ry = 100;
-
-    // 湖岸泥土
-    ctx.fillStyle = '#8a7a5a';
-    ctx.beginPath();
-    ctx.ellipse(lx - cx, ly - cy, rx + 8, ry + 8, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    // 浅水区
-    ctx.fillStyle = '#5aa0c0';
-    ctx.beginPath();
-    ctx.ellipse(lx - cx, ly - cy, rx + 3, ry + 3, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    // 深水
-    ctx.fillStyle = PAL.WATER;
-    ctx.beginPath();
-    ctx.ellipse(lx - cx, ly - cy, rx - 5, ry - 5, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    // 高光
-    ctx.fillStyle = 'rgba(150,210,240,0.4)';
-    ctx.beginPath();
-    ctx.ellipse(lx - cx - 25, ly - cy - 20, rx * 0.35, ry * 0.25, -0.3, 0, Math.PI * 2);
-    ctx.fill();
-
-    // 动态波纹
-    const t = Date.now() / 1000;
-    ctx.strokeStyle = 'rgba(150,210,240,0.25)';
-    ctx.lineWidth = 1;
-    for (let i = 0; i < 4; i++) {
-      const wr = 20 + i * 25 + Math.sin(t * 0.5 + i) * 5;
-      ctx.beginPath();
-      ctx.ellipse(lx - cx + Math.sin(t + i) * 10, ly - cy + Math.cos(t * 0.7 + i) * 8, wr, wr * 0.5, 0, 0, Math.PI * 2);
-      ctx.stroke();
+  // 渲染单个地标
+  _renderLandmark(ctx, lm, cx, cy) {
+    const x = lm.x - cx, y = lm.y - cy;
+    const sprite = SCENE_SPRITES[lm.type];
+    
+    // 统一像素风地标阴影
+    ctx.fillStyle = 'rgba(0,0,0,0.15)';
+    if (lm.type === 'bigTree') {
+      ctx.fillRect(x + 12, y + 36, 40, 16);
+      if (sprite) PixelArt.draw(ctx, sprite, x, y, 3);
+    } else if (lm.type === 'roundTree') {
+      ctx.fillRect(x + 8, y + 26, 28, 12);
+      if (sprite) PixelArt.draw(ctx, sprite, x, y, 3);
+    } else if (lm.type === 'bush') {
+      ctx.fillRect(x + 4, y + 14, 28, 8);
+      if (sprite) PixelArt.draw(ctx, sprite, x, y, 3);
+    } else if (lm.type === 'tree' || lm.type === 'crookedTree') {
+      ctx.fillRect(x + 10, y + 28, 28, 12);
+      if (sprite) PixelArt.draw(ctx, sprite, x, y, 3);
+    } else {
+      ctx.fillRect(x + 4, y + 10, 24, 8);
+      if (sprite) PixelArt.draw(ctx, sprite, x, y, 3);
     }
   },
 

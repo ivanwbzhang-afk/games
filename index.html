@@ -99,7 +99,7 @@
     #chatAIO {
       display: none;
       width: 100%;
-      height: 45%;
+      height: 40%;
       background: var(--qq-bg);
       flex-direction: column;
       position: relative;
@@ -554,7 +554,16 @@
       z-index: 70; display:none;
       align-items: center; justify-content: center;
     }
-    .panel-overlay.show { display:flex; animation: popIn 0.3s cubic-bezier(0.32,0.72,0,1); }
+    .panel-overlay.show { display:flex; animation: panelFadeIn 0.25s ease-out; }
+    @keyframes panelFadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .panel-overlay.show > * { animation: panelScaleIn 0.25s cubic-bezier(0.32,0.72,0,1); }
+    @keyframes panelScaleIn {
+      from { transform: scale(0.9); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
 
     /* ===== 拍照卡片 ===== */
     .photo-card-inner {
@@ -640,9 +649,93 @@
     .pp-act:active { transform:scale(0.94); }
     .pp-act .pa-icon { font-size:24px; }
     .pp-act .pa-label { font-size:11px; color:var(--qq-text-sec); }
+
+    /* 虚拟摇杆 */
+    #joystick {
+      position: fixed;
+      bottom: 90px;
+      left: 30px;
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.08);
+      border: 1.5px solid rgba(255,255,255,0.15);
+      z-index: 50;
+      touch-action: none;
+      display: none; /* 进入游戏后显示 */
+    }
+    #joystickKnob {
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.25);
+      border: 1px solid rgba(255,255,255,0.3);
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      transition: none;
+    }
+
+    /* 返回首页按钮 */
+    .back-home {
+      position: fixed;
+      top: 12px;
+      left: 12px;
+      z-index: 10000;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.45);
+      -webkit-backdrop-filter: blur(12px);
+      backdrop-filter: blur(12px);
+      border: 0.5px solid rgba(255,255,255,0.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+      transition: transform 0.15s, background 0.15s;
+      pointer-events: auto !important;
+      touch-action: auto !important;
+    }
+    .back-home:active { transform: scale(0.9); background: rgba(0,0,0,0.6); }
+    .back-home svg { width: 18px; height: 18px; stroke: rgba(255,255,255,0.85); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
   </style>
 </head>
 <body>
+  <div class="back-home" id="backHomeBtn">
+    <svg viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7"/></svg>
+  </div>
+  <script>
+    (function(){
+      var btn = document.getElementById('backHomeBtn');
+      function goHome(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        // 向上找到 index.html 所在的根目录
+        var path = window.location.pathname;
+        var parts = path.split('/');
+        // 去掉最后两级 (games/遛狗/index.html → 根)
+        while (parts.length > 0 && parts[parts.length - 1] !== 'games') {
+          parts.pop();
+        }
+        if (parts.length > 0) parts.pop(); // 去掉 'games'
+        var root = parts.join('/') || '/';
+        if (!root.endsWith('/')) root += '/';
+        window.location.href = root + 'index.html';
+      }
+      btn.addEventListener('click', goHome, true);
+      btn.addEventListener('touchstart', function(e){
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+      }, true);
+      btn.addEventListener('touchend', function(e){
+        goHome(e);
+      }, true);
+    })();
+  </script>
   <!-- 选宠物界面 -->
   <div id="petSelectOverlay">
     <h1>遛狗公园</h1>
@@ -654,6 +747,10 @@
   <!-- 游戏主界面 -->
   <div id="app">
     <canvas id="gameCanvas"></canvas>
+    <!-- 虚拟摇杆 -->
+    <div id="joystick">
+      <div id="joystickKnob"></div>
+    </div>
     <!-- 常驻底部输入栏（非聊天模式也可见） -->
     <div id="worldInputBar" class="hidden">
       <input id="worldInput" type="text" placeholder="说点什么..." maxlength="60">

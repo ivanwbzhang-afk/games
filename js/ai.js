@@ -17,7 +17,7 @@ const PetAI = {
    */
   triggerNotice(pet, targetPet) {
     pet.excitement = 60;
-    pet.facing = targetPet.x > pet.x ? 1 : -1;
+    pet.facing = targetPet.x > pet.x ? 'right' : 'left';
     // 尾巴摇起来 - 通过animFrame体现
     pet.animFrame = 1;
   },

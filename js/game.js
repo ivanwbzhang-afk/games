@@ -154,7 +154,8 @@ const Game = {
 
     let availH = window.innerHeight;
     if (ChatAIO.active) {
-      availH = window.innerHeight * 0.55;
+      // 玩耍模式：上方60%是游戏画面，下方40%是聊天AIO
+      availH = Math.floor(window.innerHeight * 0.6);
     } else {
       // 减去底部输入栏高度
       const worldBar = document.getElementById('worldInputBar');
@@ -173,6 +174,12 @@ const Game = {
 
     this.camera.w = window.innerWidth;
     this.camera.h = availH;
+
+    // 同步聊天面板高度
+    if (ChatAIO.active) {
+      const chatEl = document.getElementById('chatAIO');
+      if (chatEl) chatEl.style.height = (window.innerHeight - availH) + 'px';
+    }
   },
 
   /**
@@ -191,6 +198,57 @@ const Game = {
   },
 
   _update(dt) {
+    // 摇杆驱动主人移动
+    if (this.joystickActive && (this.playerOwner.state !== 'sit')) {
+      // 如果正在坐着，摇杆推动时先站起来
+      if (this.playerOwner.state === 'sit') {
+        this.playerOwner.state = 'idle';
+      }
+      const speed = this.playerOwner.speed;
+      const nx = this.playerOwner.x + this.joystickDir.x * speed;
+      const ny = this.playerOwner.y + this.joystickDir.y * speed;
+      if (GameMap.isWalkable(nx, ny)) {
+        this.playerOwner.x = nx;
+        this.playerOwner.y = ny;
+      }
+      if (Math.abs(this.joystickDir.x) > Math.abs(this.joystickDir.y)) {
+        this.playerOwner.facing = this.joystickDir.x > 0 ? 'right' : 'left';
+      } else if (Math.abs(this.joystickDir.y) > 0.1) {
+        this.playerOwner.facing = this.joystickDir.y > 0 ? 'down' : 'up';
+      }
+      this.playerOwner.state = 'walk';
+      this.playerOwner.targetX = this.playerOwner.x;
+      this.playerOwner.targetY = this.playerOwner.y;
+      this.playerOwner.animTimer += dt;
+      if (this.playerOwner.animTimer > 300) {
+        this.playerOwner.animTimer = 0;
+        this.playerOwner.animFrame = (this.playerOwner.animFrame + 1) % 2;
+      }
+    } else if (this.joystickActive && this.playerOwner.state === 'sit') {
+      // 坐着时推摇杆 → 站起来
+      this.playerOwner.state = 'idle';
+    } else if (!this.joystickActive && this.playerOwner.state === 'walk') {
+      // 摇杆松开时，立刻停止行走
+      const dx = this.playerOwner.targetX - this.playerOwner.x;
+      const dy = this.playerOwner.targetY - this.playerOwner.y;
+      if (Math.hypot(dx, dy) < 5) {
+        this.playerOwner.state = 'idle';
+        this.playerOwner.animFrame = 0;
+        this.playerOwner.targetX = this.playerOwner.x;
+        this.playerOwner.targetY = this.playerOwner.y;
+
+        // 停下来后检测附近是否有长椅，有则自动坐下
+        const nearBench = GameMap.getBenchAt(this.playerOwner.x, this.playerOwner.y, 30);
+        if (nearBench) {
+          this.playerOwner.state = 'sit';
+          this.playerOwner.facing = 'down';
+          this.playerOwner._preSitX = this.playerOwner.x;
+          this.playerOwner._preSitY = this.playerOwner.y;
+          this.showNotification('坐下休息一会儿~');
+        }
+      }
+    }
+
     // 更新主人
     this.playerOwner.update(dt);
 
@@ -218,48 +276,62 @@ const Game = {
     // 更新气味标记
     GameMap.updateScentMarks();
 
-    // ===== 牵绳物理：宠物拥有最高移动权，强制拖着主人走 =====
+    // ===== 牵绳物理：人和宠物 2:1 权重 =====
     if (!this.playerPet.interacting) {
       const petDx = this.playerPet.x - this.playerOwner.x;
       const petDy = this.playerPet.y - this.playerOwner.y;
       const leashDist = Math.hypot(petDx, petDy);
       const leashMax = this.playerPet.leashLength;
 
-      // 只要宠物在移动（walk/sniff目标/surprise），主人就被拖着走
-      const petMoving = this.playerPet.state === 'walk' ||
-                        this.playerPet.state === 'surprise' ||
-                        (this.playerPet.state === 'sniff' && leashDist > leashMax * 0.6);
+      // 用户是否在手动控制主人
+      const ownerMoving = this.joystickActive ||
+        (this.playerOwner.state === 'walk' &&
+        Math.hypot(this.playerOwner.targetX - this.playerOwner.x,
+                   this.playerOwner.targetY - this.playerOwner.y) > 3);
 
-      if (petMoving && leashDist > leashMax * 0.4) {
-        // 拉力随距离增大：越远拉力越强，超过牵绳长度时强制同步
-        const tension = Math.min(1, (leashDist - leashMax * 0.4) / (leashMax * 0.6));
-        const pullSpeed = this.playerPet.speed * tension;
-        const nx = this.playerOwner.x + (petDx / leashDist) * pullSpeed;
-        const ny = this.playerOwner.y + (petDy / leashDist) * pullSpeed;
-
+      // 无操控时：主人缓慢跟随宠物方向
+      if (!ownerMoving && leashDist > leashMax * 0.5) {
+        const followSpeed = 0.2;
+        const nx = this.playerOwner.x + (petDx / leashDist) * followSpeed;
+        const ny = this.playerOwner.y + (petDy / leashDist) * followSpeed;
         if (GameMap.isWalkable(nx, ny)) {
           this.playerOwner.x = nx;
           this.playerOwner.y = ny;
         }
-        if (Math.abs(petDx) > 1) this.playerOwner.facing = petDx > 0 ? 1 : -1;
-
-        // 主人表现为被拖着走的状态
+        if (Math.abs(petDx) > 1) this.playerOwner.facing = petDx > 0 ? 'right' : 'left';
         this.playerOwner.state = 'walk';
         this.playerOwner.targetX = this.playerOwner.x;
         this.playerOwner.targetY = this.playerOwner.y;
-        // 更新动画
         this.playerOwner.animTimer += dt;
-        if (this.playerOwner.animTimer > 300) {
+        if (this.playerOwner.animTimer > 400) {
           this.playerOwner.animTimer = 0;
           this.playerOwner.animFrame = (this.playerOwner.animFrame + 1) % 2;
         }
       }
 
-      // 硬约束：牵绳不能超过最大长度的1.5倍（防止极端情况）
-      if (leashDist > leashMax * 1.5) {
-        const ratio = (leashMax * 1.2) / leashDist;
-        this.playerOwner.x = this.playerPet.x - petDx * ratio;
-        this.playerOwner.y = this.playerPet.y - petDy * ratio;
+      // 双向软约束：牵绳超长时，人2:狗1权重（人承担少，狗被拉回多）
+      if (leashDist > leashMax) {
+        const excess = leashDist - leashMax;
+        const ownerPull = excess * 0.33; // 人承担33%
+        const petPull = excess * 0.67;   // 狗承担67%
+        const nx_dir = petDx / leashDist;
+        const ny_dir = petDy / leashDist;
+
+        // 主人被拉向宠物
+        const ownerNx = this.playerOwner.x + nx_dir * ownerPull;
+        const ownerNy = this.playerOwner.y + ny_dir * ownerPull;
+        if (GameMap.isWalkable(ownerNx, ownerNy)) {
+          this.playerOwner.x = ownerNx;
+          this.playerOwner.y = ownerNy;
+        }
+
+        // 宠物被拉回主人
+        const petNx = this.playerPet.x - nx_dir * petPull;
+        const petNy = this.playerPet.y - ny_dir * petPull;
+        if (GameMap.isWalkable(petNx, petNy)) {
+          this.playerPet.x = petNx;
+          this.playerPet.y = petNy;
+        }
       }
     }
 
@@ -338,7 +410,7 @@ const Game = {
     if (closest && minDist > 50) {
       // 宠物竖耳、兴奋，然后主动跑过去
       this.playerPet.excitement = 70;
-      this.playerPet.facing = closest.pet.x > this.playerPet.x ? 1 : -1;
+      this.playerPet.facing = closest.pet.x > this.playerPet.x ? 'right' : 'left';
       this._seekingNpc = closest;
 
       // 让宠物跑向那只狗
@@ -428,14 +500,14 @@ const Game = {
           const sx = npc.x - vcam.x;
           const sy = npc.y - vcam.y;
           if (sx > -50 && sx < vcam.w + 50 && sy > -50 && sy < vcam.h + 50) {
-            const renderState = (npc.state === 'walkToSit') ? 'walk' : npc.state;
-            const sprites = OWNER_SPRITES[renderState] || OWNER_SPRITES.idle;
+            const key = npc.getSpriteKey ? npc.getSpriteKey() : 'down_idle';
+            const sprites = OWNER_SPRITES[key] || OWNER_SPRITES.down_idle;
             const frame = sprites[npc.animFrame % sprites.length];
-            const colored = frame.map(row => row.map(c => c === PAL.SHIRT_BLUE ? npc.shirtColor : c));
-            if (npc.facing === -1) {
-              PixelArt.drawFlipped(ctx, colored, sx - 12, sy - 34);
+            const colored = frame.map(row => row.map(c => c === PAL.SHIRT_BLUE ? npc.shirtColor : (c === '#5599cc' ? npc.shirtColor : c)));
+            if (npc.facing === 'left') {
+              PixelArt.drawFlipped(ctx, colored, sx - 18, sy - 57);
             } else {
-              PixelArt.draw(ctx, colored, sx - 12, sy - 34);
+              PixelArt.draw(ctx, colored, sx - 18, sy - 57);
             }
           }
           ctx.globalAlpha = 1;
@@ -515,8 +587,61 @@ const Game = {
   _bindInput() {
     const canvas = this.canvas;
 
-    // 触摸/点击移动
-    const handleMove = (clientX, clientY) => {
+    // ===== 虚拟摇杆 =====
+    const joystick = document.getElementById('joystick');
+    const knob = document.getElementById('joystickKnob');
+    joystick.style.display = 'block';
+
+    this.joystickDir = { x: 0, y: 0 };
+    this.joystickActive = false;
+
+    const joyRect = () => joystick.getBoundingClientRect();
+    const joyRadius = 50;
+    const knobMaxDist = 30;
+
+    const handleJoyMove = (cx, cy) => {
+      const r = joyRect();
+      const centerX = r.left + r.width / 2;
+      const centerY = r.top + r.height / 2;
+      let dx = cx - centerX;
+      let dy = cy - centerY;
+      const dist = Math.hypot(dx, dy);
+      if (dist > knobMaxDist) {
+        dx = (dx / dist) * knobMaxDist;
+        dy = (dy / dist) * knobMaxDist;
+      }
+      knob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+      this.joystickDir.x = dx / knobMaxDist;
+      this.joystickDir.y = dy / knobMaxDist;
+      this.joystickActive = Math.hypot(this.joystickDir.x, this.joystickDir.y) > 0.15;
+    };
+
+    const handleJoyEnd = () => {
+      knob.style.transform = 'translate(-50%, -50%)';
+      this.joystickDir.x = 0;
+      this.joystickDir.y = 0;
+      this.joystickActive = false;
+    };
+
+    joystick.addEventListener('touchstart', (e) => {
+      e.preventDefault(); e.stopPropagation();
+      handleJoyMove(e.touches[0].clientX, e.touches[0].clientY);
+    }, { passive: false });
+    joystick.addEventListener('touchmove', (e) => {
+      e.preventDefault(); e.stopPropagation();
+      handleJoyMove(e.touches[0].clientX, e.touches[0].clientY);
+    }, { passive: false });
+    joystick.addEventListener('touchend', (e) => { e.preventDefault(); handleJoyEnd(); });
+    joystick.addEventListener('touchcancel', handleJoyEnd);
+
+    // PC鼠标支持
+    let joyMouseDown = false;
+    joystick.addEventListener('mousedown', (e) => { joyMouseDown = true; handleJoyMove(e.clientX, e.clientY); });
+    document.addEventListener('mousemove', (e) => { if (joyMouseDown) handleJoyMove(e.clientX, e.clientY); });
+    document.addEventListener('mouseup', () => { if (joyMouseDown) { joyMouseDown = false; handleJoyEnd(); } });
+
+    // 点击画布用于交互检测（宠物/NPC/长椅），不用于移动
+    const handleTap = (clientX, clientY) => {
       if (!this.running) return;
       if (Interaction.playSessionActive) return;
 
@@ -524,52 +649,27 @@ const Game = {
       const x = (clientX - rect.left) / this.zoom + this.camera.x;
       const y = (clientY - rect.top) / this.zoom + this.camera.y;
 
-      // 检测是否点击了自家宠物 → 互动面板
+      // 检测宠物点击
       const ownPetDist = Math.hypot(this.playerPet.x - x, this.playerPet.y - y);
-      if (ownPetDist < 22) {
-        this.openPetPanel(this.playerPet, true);
-        return;
-      }
-
-      // 检测是否点击了NPC宠物 → 互动面板（他人模式）
+      if (ownPetDist < 22) { this.openPetPanel(this.playerPet, true); return; }
       for (const npc of this.npcOwners) {
         const pd = Math.hypot(npc.pet.x - x, npc.pet.y - y);
-        if (pd < 22) {
-          this.openPetPanel(npc.pet, false);
-          return;
-        }
+        if (pd < 22) { this.openPetPanel(npc.pet, false); return; }
       }
 
-      // 检测是否点击了长椅
+      // 检测长椅
       const bench = GameMap.getBenchAt(x, y, 25);
       if (bench) {
         if (this.playerOwner.state === 'sit') {
           this.playerOwner.state = 'idle';
-          this.showNotification('站起来继续散步~');
           return;
         }
         this.playerOwner.walkToAndSit(bench.x + 12, bench.y - 2);
-        this.showNotification('去长椅上坐会儿~');
         return;
       }
-
-      if (this.playerOwner.state === 'sit') {
-        this.playerOwner.state = 'idle';
-      }
-
-      this.touchTarget = { x, y };
-      this.playerOwner.moveTo(x, y);
     };
 
-    canvas.addEventListener('click', (e) => handleMove(e.clientX, e.clientY));
-    canvas.addEventListener('touchstart', (e) => {
-      e.preventDefault();
-      handleMove(e.touches[0].clientX, e.touches[0].clientY);
-    }, { passive: false });
-    canvas.addEventListener('touchmove', (e) => {
-      e.preventDefault();
-      handleMove(e.touches[0].clientX, e.touches[0].clientY);
-    }, { passive: false });
+    canvas.addEventListener('click', (e) => handleTap(e.clientX, e.clientY));
 
     // 背包按钮 → 打开背包面板
     document.getElementById('bagBtn').addEventListener('click', () => {
@@ -839,11 +939,60 @@ const Game = {
   },
 
   _doPetAction(pet, act, isOwn) {
+    // 通用：生成粒子的辅助
+    const burst = (emoji, count, color) => {
+      for (let i = 0; i < count; i++) {
+        pet.particles.push({
+          x: pet.x + (Math.random()-0.5)*10,
+          y: pet.y - 10 - Math.random()*8,
+          vx: (Math.random()-0.5)*2,
+          vy: -0.8 - Math.random()*1.5,
+          life: 600 + Math.random()*300,
+          maxLife: 900,
+          color: color || '#f1c40f'
+        });
+      }
+    };
+
+    // 通用：临时状态切换（duration ms后恢复idle）
+    const tempState = (state, duration) => {
+      const prev = pet.state;
+      pet.state = state;
+      pet.animFrame = 0;
+      pet._interactAnim = true;
+      setTimeout(() => {
+        if (pet._interactAnim) {
+          pet.state = 'idle';
+          pet.animFrame = 0;
+          pet._interactAnim = false;
+        }
+      }, duration);
+    };
+
+    // 通用：弹跳动画（通过临时缩放偏移）
+    const bounce = () => {
+      pet._bounceTimer = 0;
+      pet._bouncing = true;
+      const interval = setInterval(() => {
+        pet._bounceTimer += 50;
+        if (pet._bounceTimer >= 600) {
+          pet._bouncing = false;
+          pet._bounceOffset = 0;
+          clearInterval(interval);
+        } else {
+          pet._bounceOffset = Math.sin(pet._bounceTimer / 100 * Math.PI) * 4;
+        }
+      }, 50);
+    };
+
     switch (act) {
       case 'pat':
         pet.happiness = Math.min(100, pet.happiness + 8);
         this.showNotification(`你轻轻摸了摸${pet.name}的头，它眯起了眼睛`);
         this.addSpeechBubble(pet, '😊');
+        tempState('sit', 2000); // 蹲下享受抚摸
+        burst(null, 6, '#ff9ff3');
+        bounce();
         break;
       case 'feed': {
         const food = this.inventory.find(i => i.type === 'food' && i.count > 0);
@@ -851,12 +1000,18 @@ const Game = {
         this.useInventoryItem(food.id);
         pet.happiness = Math.min(100, pet.happiness + 12);
         this.showNotification(`${pet.name}吃了${food.name}，满足地舔舔嘴`);
-        for (let i = 0; i < 5; i++) {
+        this.addSpeechBubble(pet, '😋');
+        tempState('sniff', 2500); // 低头吃东西（用sniff动画模拟）
+        // 食物粒子
+        for (let i = 0; i < 8; i++) {
           pet.particles.push({
-            x: pet.x, y: pet.y-8,
-            vx: (Math.random()-0.5)*2, vy:-1-Math.random()*1.5,
-            life: 500, maxLife: 500,
-            color: ['#ff6b6b','#f1c40f','#ff9ff3'][Math.floor(Math.random()*3)]
+            x: pet.x + (Math.random()-0.5)*6,
+            y: pet.y - 6,
+            vx: (Math.random()-0.5)*1.5,
+            vy: -1.2 - Math.random()*1,
+            life: 500 + Math.random()*400,
+            maxLife: 900,
+            color: ['#ff6b6b','#f1c40f','#ff9ff3','#ffa502'][Math.floor(Math.random()*4)]
           });
         }
         break;
@@ -865,31 +1020,108 @@ const Game = {
         this.showNotification(`${pet.name}转了三个圈！好厉害`);
         this.addSpeechBubble(pet, '🌀');
         pet.happiness = Math.min(100, pet.happiness + 5);
+        // 快速切换朝向模拟转圈
+        pet._interactAnim = true;
+        let spinCount = 0;
+        const spinInterval = setInterval(() => {
+          pet.facing *= -1;
+          pet.animFrame = (pet.animFrame + 1) % 2;
+          pet.state = 'walk';
+          spinCount++;
+          // 转圈粒子
+          pet.particles.push({
+            x: pet.x + Math.cos(spinCount)*8,
+            y: pet.y - 5 + Math.sin(spinCount)*5,
+            vx: Math.cos(spinCount)*1.5, vy: -0.5,
+            life: 400, maxLife: 400, color: '#54a0ff'
+          });
+          if (spinCount >= 12) {
+            clearInterval(spinInterval);
+            pet.state = 'idle';
+            pet.animFrame = 0;
+            pet._interactAnim = false;
+          }
+        }, 120);
         break;
       case 'dead':
         this.showNotification(`${pet.name}四脚朝天"装死"，然后偷看你的反应`);
         this.addSpeechBubble(pet, '😵');
         pet.happiness = Math.min(100, pet.happiness + 5);
+        tempState('dig', 3000); // dig姿态模拟趴下装死
+        // 灵魂出窍粒子
+        setTimeout(() => {
+          for (let i = 0; i < 4; i++) {
+            pet.particles.push({
+              x: pet.x + (Math.random()-0.5)*4,
+              y: pet.y - 12,
+              vx: (Math.random()-0.5)*0.5,
+              vy: -1.5 - Math.random()*0.5,
+              life: 800, maxLife: 800, color: 'rgba(255,255,255,0.6)'
+            });
+          }
+        }, 500);
         break;
       case 'shake':
         this.showNotification(`${pet.name}伸出爪子和你握手！`);
         this.addSpeechBubble(pet, '🤝');
         pet.happiness = Math.min(100, pet.happiness + 5);
+        tempState('sit', 2000);
+        bounce();
+        burst(null, 5, '#f1c40f');
+        // 闪光粒子
+        setTimeout(() => {
+          for (let i = 0; i < 6; i++) {
+            pet.particles.push({
+              x: pet.x + 6, y: pet.y - 4,
+              vx: (Math.random()-0.5)*2, vy: -1 - Math.random(),
+              life: 500, maxLife: 500, color: '#f1c40f'
+            });
+          }
+        }, 300);
         break;
       case 'sit':
         pet.state = 'sit';
+        pet.animFrame = 0;
         this.showNotification(`${pet.name}乖乖坐下了`);
+        this.addSpeechBubble(pet, '🐾');
         setTimeout(() => { if (pet.state === 'sit') pet.state = 'idle'; }, 3000);
         break;
       case 'tease':
         pet.excitement = 90;
         this.showNotification(`你在${pet.name}面前晃了晃手，它跳了起来！`);
         this.addSpeechBubble(pet, '❗');
+        bounce();
+        // 快速左右看动画
+        pet._interactAnim = true;
+        let teaseCount = 0;
+        const teaseInterval = setInterval(() => {
+          pet.facing *= -1;
+          pet.state = 'walk';
+          pet.animFrame = (pet.animFrame + 1) % 2;
+          teaseCount++;
+          if (teaseCount >= 8) {
+            clearInterval(teaseInterval);
+            pet.state = 'idle';
+            pet._interactAnim = false;
+          }
+        }, 150);
+        burst(null, 4, '#ff6b6b');
         break;
       case 'praise':
         pet.happiness = Math.min(100, pet.happiness + 5);
         this.showNotification(`你夸了夸${pet.name}，它高兴地摇尾巴`);
         this.addSpeechBubble(pet, '🥰');
+        bounce();
+        // 爱心粒子
+        for (let i = 0; i < 6; i++) {
+          pet.particles.push({
+            x: pet.x + (Math.random()-0.5)*12,
+            y: pet.y - 12 - Math.random()*6,
+            vx: (Math.random()-0.5)*1,
+            vy: -1 - Math.random(),
+            life: 700, maxLife: 700, color: '#ff6b6b'
+          });
+        }
         break;
     }
   },

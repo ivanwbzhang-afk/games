@@ -27,7 +27,7 @@ const PetSelect = {
       canvas.height = 40;
       const ctx = canvas.getContext('2d');
 
-      const frame = pet.idle[0];
+      const frame = pet.down_idle ? pet.down_idle[0] : (pet.idle ? pet.idle[0] : []);
       PixelArt.draw(ctx, frame, 0, 0);
 
       const name = document.createElement('div');

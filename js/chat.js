@@ -41,8 +41,10 @@ const ChatAIO = {
     const chatEl = document.getElementById('chatAIO');
     chatEl.classList.add('active');
 
-    // 隐藏场域输入栏
+    // 隐藏场域输入栏、摇杆、背包按钮
     document.getElementById('worldInputBar').classList.add('hidden');
+    document.getElementById('joystick').style.display = 'none';
+    document.getElementById('bagBtn').style.display = 'none';
 
     document.getElementById('chatTitle').textContent =
       `与${npcOwner.pet.name}的主人聊天`;
@@ -82,9 +84,12 @@ const ChatAIO = {
 
     const chatEl = document.getElementById('chatAIO');
     chatEl.classList.remove('active');
+    chatEl.style.height = ''; // 清除内联样式
 
-    // 恢复场域输入栏
+    // 恢复场域输入栏、摇杆、背包按钮
     document.getElementById('worldInputBar').classList.remove('hidden');
+    document.getElementById('joystick').style.display = 'block';
+    document.getElementById('bagBtn').style.display = '';
 
     this.addSystemMessage('散步继续...');
 
