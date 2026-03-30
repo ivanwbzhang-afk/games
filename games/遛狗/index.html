@@ -667,20 +667,37 @@
   </style>
 </head>
 <body>
-  <a class="back-home" href="../../index.html" id="backHomeBtn" title="返回首页">
+  <div class="back-home" id="backHomeBtn">
     <svg viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7"/></svg>
-  </a>
+  </div>
   <script>
-    document.getElementById('backHomeBtn').addEventListener('click', function(e) {
-      e.preventDefault();
-      e.stopPropagation();
-      window.location.href = this.href;
-    });
-    document.getElementById('backHomeBtn').addEventListener('touchend', function(e) {
-      e.preventDefault();
-      e.stopPropagation();
-      window.location.href = this.href;
-    });
+    (function(){
+      var btn = document.getElementById('backHomeBtn');
+      function goHome(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        // 向上找到 index.html 所在的根目录
+        var path = window.location.pathname;
+        var parts = path.split('/');
+        // 去掉最后两级 (games/遛狗/index.html → 根)
+        while (parts.length > 0 && parts[parts.length - 1] !== 'games') {
+          parts.pop();
+        }
+        if (parts.length > 0) parts.pop(); // 去掉 'games'
+        var root = parts.join('/') || '/';
+        if (!root.endsWith('/')) root += '/';
+        window.location.href = root + 'index.html';
+      }
+      btn.addEventListener('click', goHome, true);
+      btn.addEventListener('touchstart', function(e){
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+      }, true);
+      btn.addEventListener('touchend', function(e){
+        goHome(e);
+      }, true);
+    })();
   </script>
   <!-- 选宠物界面 -->
   <div id="petSelectOverlay">
