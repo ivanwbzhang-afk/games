@@ -15,6 +15,9 @@ html, body {
   color: #e0e0e0;
   margin: 0;
   padding: 0;
+  /* 防止移动端键盘弹起时缩小视口 */
+  position: fixed;
+  inset: 0;
 }
 
 /* ========== Lobby ========== */

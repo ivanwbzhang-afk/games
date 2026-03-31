@@ -41,7 +41,14 @@ const Main = {
   },
 
   _fixHeight() {
+    // 首次记住完整视口高度，键盘弹起时不更新（避免页面被压缩）
     const h = window.innerHeight;
+    if (!this._initialHeight) {
+      this._initialHeight = h;
+    }
+    // 如果高度缩小超过 25%（键盘弹起），不更新布局
+    if (h < this._initialHeight * 0.75) return;
+    this._initialHeight = h;
     const lobby = document.getElementById('lobby');
     const app = document.getElementById('app');
     if (lobby) lobby.style.height = h + 'px';
