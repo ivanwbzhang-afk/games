@@ -144,6 +144,21 @@ const Chat = {
       const isWhisper = style === 'whisper';
       Characters.showChatBubble(name, text, isWhisper);
     }
+
+    // 多人同步：自己发的消息广播到云端
+    if (type === 'self' && typeof Network !== 'undefined' && Network.ready) {
+      Network.sendMessage({ name: Network.userName, text, type: 'other', style });
+    }
+  },
+
+  // 收到远程消息（来自其他玩家）
+  addRemoteMessage(msgData) {
+    const msg = { name: msgData.name, text: msgData.text, type: 'other', style: msgData.style || '', time: msgData.timestamp };
+    this.messages.push(msg);
+    this._renderMessage(msg);
+    if (msgData.name) {
+      Characters.showChatBubble(msgData.name, msgData.text, msgData.style === 'whisper');
+    }
   },
 
   addSystemMessage(text) {

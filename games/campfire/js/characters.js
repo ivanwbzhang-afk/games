@@ -2,6 +2,7 @@
 const Characters = {
   list: [],
   player: null,
+  remotePlayers: [], // 来自云端的其他真实玩家
 
   palettes: [
     { hair: '#3a2a15', skin: '#e8c090', shirt: '#4a6a9a', pants: '#2a3a5a' },
@@ -255,13 +256,13 @@ const Characters = {
 
   drawBehindFire(ctx, time, fireIntensity, fireCy, ambient) {
     const ps = 5;
-    const behind = [...this.list].filter(c => c.y < fireCy).sort((a, b) => a.y - b.y);
+    const behind = [...this.getAllCharacters()].filter(c => c.y < fireCy).sort((a, b) => a.y - b.y);
     behind.forEach(char => this._drawCharacter(ctx, char, time, ps, fireIntensity, ambient));
   },
 
   drawInFrontOfFire(ctx, time, fireIntensity, fireCy, ambient) {
     const ps = 5;
-    const front = [...this.list].filter(c => c.y >= fireCy).sort((a, b) => a.y - b.y);
+    const front = [...this.getAllCharacters()].filter(c => c.y >= fireCy).sort((a, b) => a.y - b.y);
     front.forEach(char => this._drawCharacter(ctx, char, time, ps, fireIntensity, ambient));
   },
 
@@ -524,7 +525,7 @@ const Characters = {
     const container = document.getElementById('char-labels');
     if (!container) return;
 
-    this.list.forEach(char => {
+    this.getAllCharacters().forEach(char => {
       const ps = 5;
       const x = Math.floor(char.x);
       const isSitting = !char.isWalking && !char.isDancing && !(char.moveTask && char.moveTask.phase === 'action');
@@ -599,10 +600,78 @@ const Characters = {
 
   getNeighbors() {
     if (!this.player) return [];
-    return this.list.filter(c => {
+    return this.getAllCharacters().filter(c => {
       if (c === this.player) return false;
       const dx = c.x - this.player.x, dy = c.y - this.player.y;
       return Math.sqrt(dx*dx + dy*dy) < 140;
+    });
+  },
+
+  // 获取所有角色（NPC + 远程玩家）用于渲染
+  getAllCharacters() {
+    return [...this.list, ...this.remotePlayers];
+  },
+
+  // 从云端数据更新远程玩家列表
+  updateRemotePlayers(playersData) {
+    playersData.forEach(pd => {
+      let rp = this.remotePlayers.find(r => r._remoteId === pd._id);
+      if (!rp) {
+        // 新玩家加入
+        const paletteIdx = (pd.colorIdx || 0) % this.palettes.length;
+        rp = this._createCharacter(pd.name || '???', paletteIdx, false);
+        rp._remoteId = pd._id;
+        rp._isRemote = true;
+        this.remotePlayers.push(rp);
+        Chat.addSystemMessage(`👤 ${pd.name || '???'} 来到了篝火旁`);
+      }
+      // 平滑更新位置（不是瞬移）
+      rp._targetX = pd.x || rp.x;
+      rp._targetY = pd.y || rp.y;
+      rp.animState = pd.animState || 'sit';
+      rp.facing = pd.facing || 1;
+      rp.isDancing = pd.isDancing || false;
+      rp.isWalking = pd.isWalking || false;
+      rp.name = pd.name || rp.name;
+      rp._lastSeen = pd.lastSeen || Date.now();
+    });
+
+    // 移除已离线的玩家（超过30秒没更新）
+    const now = Date.now();
+    this.remotePlayers = this.remotePlayers.filter(rp => {
+      const alive = playersData.some(pd => pd._id === rp._remoteId);
+      if (!alive && (now - (rp._lastSeen || 0)) > 30000) {
+        Chat.addSystemMessage(`👤 ${rp.name} 离开了`);
+        // 清理 DOM 标签
+        const container = document.getElementById('char-labels');
+        if (container) {
+          const nameEl = container.querySelector(`[data-char-name="${rp.name}"]`);
+          if (nameEl) nameEl.remove();
+          const bubbleEl = container.querySelector(`[data-char-bubble="${rp.name}"]`);
+          if (bubbleEl) bubbleEl.remove();
+        }
+        return false;
+      }
+      return true;
+    });
+
+    // 更新在场人数
+    const countEl = document.getElementById('count-num');
+    if (countEl) countEl.textContent = this.getAllCharacters().length;
+  },
+
+  // 平滑插值远程玩家位置
+  updateRemotePositions(dt) {
+    this.remotePlayers.forEach(rp => {
+      if (rp._targetX !== undefined) {
+        rp.x = Utils.lerp(rp.x, rp._targetX, Math.min(1, dt * 5));
+        rp.y = Utils.lerp(rp.y, rp._targetY, Math.min(1, dt * 5));
+      }
+      // 跳舞动画帧更新
+      if (rp.isDancing) {
+        rp.animFrame += dt * 1.8;
+        rp.danceAngle += 0.35 * dt;
+      }
     });
   }
 };

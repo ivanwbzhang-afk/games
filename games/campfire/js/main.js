@@ -110,7 +110,7 @@ const Main = {
     }
   },
 
-  _startGame() {
+  async _startGame() {
     this.canvas = document.getElementById('scene-canvas');
     this.ctx = this.canvas.getContext('2d');
 
@@ -128,8 +128,51 @@ const Main = {
     Chat.init();
     Game.init();
 
+    // ===== 多人联机：初始化网络 =====
+    const networkOk = await Network.init();
+    if (networkOk) {
+      // 用云端分配的名字替换本地玩家名
+      Characters.player.name = Network.userName;
+      Characters.player.palette = Characters.palettes[Network.userColor % Characters.palettes.length];
+
+      // 监听篝火状态
+      Network.watchFireState((fireData) => {
+        Fire.applyRemoteState(fireData);
+      });
+
+      // 监听其他玩家
+      Network.watchPlayers((playersData) => {
+        Characters.updateRemotePlayers(playersData);
+      });
+
+      // 监听聊天消息
+      Network.watchMessages((msgData) => {
+        Chat.addRemoteMessage(msgData);
+      });
+
+      // 启动心跳
+      Network.startHeartbeat();
+
+      // 页面关闭时清理
+      window.addEventListener('beforeunload', () => {
+        Network.cleanup();
+      });
+
+      // 从云端加载篝火状态
+      try {
+        const roomResult = await Network.db.collection('rooms').doc(Network.ROOM_ID).get();
+        if (roomResult.data && roomResult.data.length > 0 && roomResult.data[0].fire) {
+          Fire.applyRemoteState(roomResult.data[0].fire);
+        }
+      } catch(e) { /* 首次没有房间数据 */ }
+
+      Chat.addSystemMessage(`🌐 已连接到篝火场域，你是「${Network.userName}」`);
+    } else {
+      Chat.addSystemMessage('⚠️ 网络连接失败，当前为单机模式');
+    }
+
     // 更新在场人数
-    document.getElementById('count-num').textContent = Characters.list.length;
+    document.getElementById('count-num').textContent = Characters.getAllCharacters().length;
 
     const initAudio = () => {
       AudioManager.init();
@@ -173,6 +216,7 @@ const Main = {
     Sky.update(timestamp);
     Fire.update(dt, timestamp);
     Characters.update(dt, timestamp);
+    Characters.updateRemotePositions(dt);
     Interactions.update(dt, timestamp, Sky.w, Sky.h);
     Chat.update(dt);
     Game.updateCooking(dt);

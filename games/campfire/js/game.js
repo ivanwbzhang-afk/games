@@ -117,6 +117,7 @@ const Game = {
       Characters.startDancing('你');
       Chat.addSystemMessage('💃 你站起身，开始围着篝火跳舞！');
       Chat.addMessage('你', '💃 来跳舞呀！', 'self');
+      if (typeof Network !== 'undefined' && Network.ready) Network.broadcastEvent('dance');
       // 随机1~2个NPC加入跳舞
       setTimeout(() => {
         const idle = Characters.list.filter(c => !c.isPlayer && !c.isDancing && !c.moveTask && !c.isCooking);

@@ -144,6 +144,24 @@ const Fire = {
     this.stats.totalWood++;
     this.stats.woodAdders.push({ name: playerName, time: Date.now() });
     this.ashGlow = 1;
+    // 多人同步：添柴后立即广播
+    if (typeof Network !== 'undefined' && Network.ready) {
+      Network.broadcastEvent('addWood');
+    }
+  },
+
+  // 从云端数据更新本地篝火状态（其他玩家的操作）
+  applyRemoteState(fireData) {
+    if (!fireData) return;
+    this.state = fireData.state || 'ash';
+    this.targetIntensity = fireData.intensity || 0;
+    this.remainingTime = fireData.remainingTime || 0;
+    this.charcoalHeat = fireData.charcoalHeat || 0;
+    this.stats.totalWood = fireData.totalWood || 0;
+    this.stats.lighter = fireData.lighter || null;
+    if (!this.stats.startTime && this.state === 'burning') {
+      this.stats.startTime = Date.now();
+    }
   },
 
   update(dt, time) {
